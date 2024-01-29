@@ -190,8 +190,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
       timer_settime (timer_ticks () * NSEC_PER_SEC / TIMER_FREQ);
     }
     
-    /* for each thread/blocked thread, check if it's waiting to be woken */
-    thread_foreach(&wake_check, NULL);
+  /* decrement the sleep counter for each sleeping thread */
+  thread_foreach(&wake_check, NULL);
 
 
   thread_tick ();
@@ -200,8 +200,9 @@ timer_interrupt (struct intr_frame *args UNUSED)
 /* Decrement a thread's sleep counter, and unblock it if the counter reaches 0. */
 static void wake_check(struct thread *t, void *UNUSED){
   if (t->sleeping){
+    //unblock if the thread doesn't need to wait for any more ticks 
     t->remaining_sleep--;
-    if(t->remaining_sleep < 1){
+    if(t->remaining_sleep < 0){
       t->sleeping = false;
       thread_unblock(t);
     }
