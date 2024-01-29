@@ -202,9 +202,10 @@ static void wake_check(struct thread *t, void *UNUSED){
   if (t->sleeping){
     //unblock if the thread doesn't need to wait for any more ticks 
     t->remaining_sleep--;
-    if(t->remaining_sleep < 0){
+    if(t->remaining_sleep <= 0){
       t->sleeping = false;
       thread_unblock(t);
+
     }
   }
 }
@@ -257,8 +258,11 @@ real_time_sleep (int64_t num, int32_t denom)
   ASSERT (intr_get_level () == INTR_ON);
   if (ticks > 0)
     {
+      // Sleep for the appropriate number of whole ticks
       timer_sleep (ticks); 
-      busy_wait ((num * TIMER_FREQ / denom) % 1);
+
+      // Delay for the remaining time
+      real_time_delay(num % denom, denom);
     }
   else 
     {
