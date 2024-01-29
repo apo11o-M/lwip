@@ -34,12 +34,18 @@ static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
+
+static void wake_check(struct thread *t, void *aux);
+static struct spinlock test_lock;
+
+
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
 void
 timer_init (void) 
 {
   intr_register_ext (0x20 + IRQ_TIMER, timer_interrupt, "8254 Timer");
+  spinlock_init (&test_lock);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -92,9 +98,15 @@ timer_sleep (int64_t ticks)
 {
   ASSERT (intr_get_level () == INTR_ON);
   
-  int64_t start = timer_ticks ();
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  struct thread *t = thread_current();
+  ASSERT (t->status == THREAD_RUNNING);
+  t->remaining_sleep = ticks;
+  t->sleeping = true;
+
+  spinlock_acquire(&test_lock);
+  thread_block(&test_lock);
+  spinlock_release(&test_lock);
+
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -178,7 +190,22 @@ timer_interrupt (struct intr_frame *args UNUSED)
       timer_settime (timer_ticks () * NSEC_PER_SEC / TIMER_FREQ);
     }
     
+    /* for each thread/blocked thread, check if it's waiting to be woken */
+    thread_foreach(&wake_check, NULL);
+
+
   thread_tick ();
+}
+
+/* Decrement a thread's sleep counter, and unblock it if the counter reaches 0. */
+static void wake_check(struct thread *t, void *UNUSED){
+  if (t->sleeping){
+    t->remaining_sleep--;
+    if(t->remaining_sleep < 1){
+      t->sleeping = false;
+      thread_unblock(t);
+    }
+  }
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
@@ -229,10 +256,8 @@ real_time_sleep (int64_t num, int32_t denom)
   ASSERT (intr_get_level () == INTR_ON);
   if (ticks > 0)
     {
-      /* We're waiting for at least one full timer tick.  Use
-         timer_sleep() because it will yield the CPU to other
-         processes. */                
       timer_sleep (ticks); 
+      busy_wait ((num * TIMER_FREQ / denom) % 1);
     }
   else 
     {

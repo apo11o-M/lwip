@@ -102,6 +102,9 @@ struct thread
   /* Shared between thread.c and synch.c. */
   struct list_elem elem; /* List element. */
 
+   int remaining_sleep; /* The number of ticks the thread still needs to sleep for. */ 
+   bool sleeping; /* Indicates whether or not the thread is sleeping */
+
 #ifdef USERPROG
   /* Owned by userprog/process.c. */
   uint32_t *pagedir; /* Page directory. */
