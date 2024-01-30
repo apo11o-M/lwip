@@ -81,9 +81,11 @@ sched_yield (struct ready_queue *curr_rq, struct thread *current)
 struct thread *
 sched_pick_next (struct ready_queue *curr_rq)
 {
+
   if (list_empty (&curr_rq->ready_list))
     return NULL;
 
+  // TODO: Modify to select next thread based on lowest vruntime, call for_each_thread
   struct thread *ret = list_entry(list_pop_front (&curr_rq->ready_list), struct thread, elem);
   curr_rq->nr_ready--;
   return ret;
@@ -106,6 +108,7 @@ sched_tick (struct ready_queue *curr_rq, struct thread *current UNUSED)
   // TODO: check if current thread vruntime is longer than ideal runtime, yield if so
   if (++curr_rq->thread_ticks >= TIME_SLICE)
     {
+      // TODO: update cpu min_vruntime
       /* Start a new time slice. */
       curr_rq->thread_ticks = 0;
 
