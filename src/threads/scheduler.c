@@ -91,6 +91,16 @@ sched_pick_next (struct ready_queue *curr_rq)
   return ret;
 }
 
+
+/* 
+ * function to sum all the weights of threads in running queue
+ */
+static void
+sum_weights (struct thread *t, void *aux)
+{
+  *(int*) aux = *(int*) aux + prio_to_weight[t->nice];
+}
+
 /* Called from thread_tick ().
  * Ready queue rq is locked upon entry.
  *
@@ -101,9 +111,14 @@ sched_pick_next (struct ready_queue *curr_rq)
  * when this function returns, else returns RETURN_NONE.
  */
 enum sched_return_action
-sched_tick (struct ready_queue *curr_rq, struct thread *current UNUSED)
+sched_tick (struct ready_queue *curr_rq, struct thread *current)
 {
-  // TODO: calculate ideal runtime
+  // calculate ideal runtime
+  int sum_of_weights = 0;
+  thread_foreach(sum_weights, &sum_of_weights);
+  sum_of_weights += prio_to_weight[current->nice];
+  uint64_t ideal_runtime = 4000000 * (list_size(&(curr_rq->ready_list)) + 1) * prio_to_weight[current->nice] / sum_of_weights;
+
   /* Enforce preemption. */
   // TODO: check if current thread vruntime is longer than ideal runtime, yield if so
   if (++curr_rq->thread_ticks >= TIME_SLICE)
