@@ -136,6 +136,7 @@ thread_tick (void)
   else
     get_cpu ()->kernel_ticks++;
 
+  // update virtual running time
   lock_own_ready_queue ();
   enum sched_return_action ret_action = sched_tick (&get_cpu ()->rq, t);
   if (ret_action == RETURN_YIELD)
@@ -175,6 +176,7 @@ wake_up_new_thread (struct thread *t)
 {
   t->status = THREAD_READY;
   t->cpu = choose_cpu_for_new_thread (t);
+  t->vruntime_0=t->cpu->min_vruntime;
   spinlock_acquire (&t->cpu->rq.lock);
   sched_unblock (&t->cpu->rq, t, 1);
   spinlock_release (&t->cpu->rq.lock);
@@ -554,6 +556,7 @@ init_boot_thread (struct thread *boot_thread, struct cpu *cpu)
   boot_thread->status = THREAD_RUNNING;
   boot_thread->tid = allocate_tid ();
   boot_thread->cpu = cpu;
+  boot_thread->vruntime_0 = 0;
   cpu->rq.curr = boot_thread;
 }
 

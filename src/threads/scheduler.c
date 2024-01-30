@@ -45,6 +45,7 @@ sched_init (struct ready_queue *curr_rq)
 enum sched_return_action
 sched_unblock (struct ready_queue *rq_to_add, struct thread *t, int initial UNUSED)
 {
+  
   list_push_back (&rq_to_add->ready_list, &t->elem);
   rq_to_add->nr_ready++;
 
@@ -100,7 +101,9 @@ sched_pick_next (struct ready_queue *curr_rq)
 enum sched_return_action
 sched_tick (struct ready_queue *curr_rq, struct thread *current UNUSED)
 {
+  // TODO: calculate ideal runtime
   /* Enforce preemption. */
+  // TODO: check if current thread vruntime is longer than ideal runtime, yield if so
   if (++curr_rq->thread_ticks >= TIME_SLICE)
     {
       /* Start a new time slice. */

@@ -32,6 +32,7 @@ struct cpu
   uint64_t user_ticks;
   uint64_t kernel_ticks;
   uint64_t cs;          /* Number of context switches */
+  uint64_t min_vruntime; /* minimum vruntime across owned threads */
   
   /* Ready queue. Owned by scheduler.c */
   struct ready_queue rq;
@@ -76,6 +77,7 @@ get_cpu (void)
 static inline void
 set_cpu (struct cpu *cpu)
 {
+  cpu->min_vruntime = 0;
   asm ("mov %0, %%gs:0" : : "r" (cpu));
 }
 
