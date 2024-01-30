@@ -135,8 +135,8 @@ thread_tick (void)
 #endif
   else
     get_cpu ()->kernel_ticks++;
-  // TODO: update virtual runtime
-
+  // TODO: update virtual runtime, partially implemented
+  t->vruntime = t->vruntime_0 + get_cpu()->cpu->user_ticks;
   lock_own_ready_queue ();
   enum sched_return_action ret_action = sched_tick (&get_cpu ()->rq, t);
   if (ret_action == RETURN_YIELD)
