@@ -135,8 +135,8 @@ thread_tick (void)
 #endif
   else
     get_cpu ()->kernel_ticks++;
+  // TODO: update virtual runtime
 
-  // update virtual running time
   lock_own_ready_queue ();
   enum sched_return_action ret_action = sched_tick (&get_cpu ()->rq, t);
   if (ret_action == RETURN_YIELD)
@@ -416,6 +416,10 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   lock_own_ready_queue ();
+  // update initial virtual runtime
+  // assign to maximum between threads current virtual runtime and cpu's min_runtime - 2E7
+  int64_t adjusted_min_vruntime = cur->cpu->min_vruntime - 20000000;
+  cur->vruntime_0 = (cur->vruntime > adjusted_min_vruntime) ?  cur->vruntime : adjusted_min_vruntime;
 
   cur->status = THREAD_READY;
   if (cur != get_cpu ()->rq.idle_thread)
