@@ -44,9 +44,15 @@ sched_init (struct ready_queue *curr_rq)
    be rescheduled when this function returns, else returns
    RETURN_NONE */
 enum sched_return_action
-sched_unblock (struct ready_queue *rq_to_add, struct thread *t, int initial UNUSED)
+sched_unblock (struct ready_queue *rq_to_add, struct thread *t, int initial)
 {
-  
+  // if called from wake_up_new_thread
+  if (initial == 1){
+    // assign threads initial virtual runtime to the cpu's minimum virtual runtime
+    t->vruntime_0=t->cpu->rq.min_vruntime;
+  }
+
+
   list_push_back (&rq_to_add->ready_list, &t->elem);
   rq_to_add->nr_ready++;
 
@@ -124,7 +130,9 @@ sched_tick (struct ready_queue *curr_rq, struct thread *current)
   // check if current thread vruntime is longer than ideal runtime, yield if so
   if (++curr_rq->thread_ticks >= TIME_SLICE && current->vruntime > ideal_runtime)
     {
-      // TODO: update cpu min_vruntime
+      // TODO: update ready queue min_vruntime
+      // if new vruntime is lower than min_runtime
+    
       /* Start a new time slice. */
       curr_rq->thread_ticks = 0;
 

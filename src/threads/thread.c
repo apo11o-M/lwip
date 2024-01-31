@@ -176,8 +176,6 @@ wake_up_new_thread (struct thread *t)
 {
   t->status = THREAD_READY;
   t->cpu = choose_cpu_for_new_thread (t);
-  // assign threads initial virtual runtime to the cpu's minimum virtual runtime
-  t->vruntime_0=t->cpu->rq.min_vruntime;
   spinlock_acquire (&t->cpu->rq.lock);
   sched_unblock (&t->cpu->rq, t, 1);
   spinlock_release (&t->cpu->rq.lock);
