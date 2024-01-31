@@ -59,6 +59,8 @@ sched_unblock (struct ready_queue *rq_to_add, struct thread *t, int initial)
     uint64_t adjusted_min_vruntime = t->cpu->rq.min_vruntime - 20000000;
     t->vruntime_0 = (t->vruntime > adjusted_min_vruntime) ?  t->vruntime : adjusted_min_vruntime;
   }
+  // assign vruntime to initial vruntime
+  t->vruntime = t->vruntime_0
 
 
   list_push_back (&rq_to_add->ready_list, &t->elem);
@@ -129,8 +131,8 @@ enum sched_return_action
 sched_tick (struct ready_queue *curr_rq, struct thread *current)
 {
 
-  // TODO: update virtual runtime, partially implemented
-  current->vruntime = current->vruntime_0 + get_cpu()->cpu->user_ticks;
+  // update virtual runtime
+  current->vruntime = current->vruntime_0 + curr_rq->thread_ticks * prio_to_weight[0] / prio_to_weight[current->nice];
 
 
   // calculate ideal runtime
@@ -144,8 +146,7 @@ sched_tick (struct ready_queue *curr_rq, struct thread *current)
   if (++curr_rq->thread_ticks >= TIME_SLICE && current->vruntime > ideal_runtime)
     {
       // TODO: update ready queue min_vruntime
-      // if new vruntime is lower than min_runtime
-    
+      
       /* Start a new time slice. */
       curr_rq->thread_ticks = 0;
 
