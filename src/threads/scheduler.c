@@ -128,6 +128,11 @@ sum_weights (struct thread *t, void *aux)
 enum sched_return_action
 sched_tick (struct ready_queue *curr_rq, struct thread *current)
 {
+
+  // TODO: update virtual runtime, partially implemented
+  current->vruntime = current->vruntime_0 + get_cpu()->cpu->user_ticks;
+
+
   // calculate ideal runtime
   int sum_of_weights = 0;
   thread_foreach(sum_weights, &sum_of_weights);
