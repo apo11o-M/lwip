@@ -556,7 +556,6 @@ init_boot_thread (struct thread *boot_thread, struct cpu *cpu)
   boot_thread->status = THREAD_RUNNING;
   boot_thread->tid = allocate_tid ();
   boot_thread->cpu = cpu;
-  boot_thread->vruntime_0 = 0;
   cpu->rq.curr = boot_thread;
 }
 
