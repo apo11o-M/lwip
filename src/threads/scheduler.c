@@ -46,10 +46,18 @@ sched_init (struct ready_queue *curr_rq)
 enum sched_return_action
 sched_unblock (struct ready_queue *rq_to_add, struct thread *t, int initial)
 {
+
+  /* Update thread's vruntime_0*/
   // if called from wake_up_new_thread
   if (initial == 1){
     // assign threads initial virtual runtime to the cpu's minimum virtual runtime
     t->vruntime_0=t->cpu->rq.min_vruntime;
+  }
+  // if called from thread_unblock
+  else {
+    // assign to maximum between threads current virtual runtime and cpu's min_runtime - 2E7
+    uint64_t adjusted_min_vruntime = t->cpu->rq.min_vruntime - 20000000;
+    t->vruntime_0 = (t->vruntime > adjusted_min_vruntime) ?  t->vruntime : adjusted_min_vruntime;
   }
 
 
