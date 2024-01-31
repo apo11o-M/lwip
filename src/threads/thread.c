@@ -419,7 +419,7 @@ thread_yield (void)
   lock_own_ready_queue ();
   // update initial virtual runtime
   // assign to maximum between threads current virtual runtime and cpu's min_runtime - 2E7
-  int64_t adjusted_min_vruntime = cur->cpu->rq.min_vruntime - 20000000;
+  uint64_t adjusted_min_vruntime = cur->cpu->rq.min_vruntime - 20000000;
   cur->vruntime_0 = (cur->vruntime > adjusted_min_vruntime) ?  cur->vruntime : adjusted_min_vruntime;
 
   cur->status = THREAD_READY;
