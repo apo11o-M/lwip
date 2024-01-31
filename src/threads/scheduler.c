@@ -60,7 +60,7 @@ sched_unblock (struct ready_queue *rq_to_add, struct thread *t, int initial)
     t->vruntime_0 = (t->vruntime > adjusted_min_vruntime) ?  t->vruntime : adjusted_min_vruntime;
   }
   // assign vruntime to initial vruntime
-  t->vruntime = t->vruntime_0
+  t->vruntime = t->vruntime_0;
 
 
   list_push_back (&rq_to_add->ready_list, &t->elem);
