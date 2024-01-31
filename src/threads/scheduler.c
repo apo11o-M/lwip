@@ -121,8 +121,8 @@ sched_tick (struct ready_queue *curr_rq, struct thread *current)
   uint64_t ideal_runtime = 4000000 * (list_size(&(curr_rq->ready_list)) + 1) * prio_to_weight[current->nice] / sum_of_weights;
 
   /* Enforce preemption. */
-  // TODO: check if current thread vruntime is longer than ideal runtime, yield if so
-  if (++curr_rq->thread_ticks >= TIME_SLICE)
+  // check if current thread vruntime is longer than ideal runtime, yield if so
+  if (++curr_rq->thread_ticks >= TIME_SLICE && current->vruntime > ideal_runtime)
     {
       // TODO: update cpu min_vruntime
       /* Start a new time slice. */
