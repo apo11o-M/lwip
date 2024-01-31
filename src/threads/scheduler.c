@@ -28,6 +28,7 @@
 void
 sched_init (struct ready_queue *curr_rq)
 {
+  curr_rq->min_vruntime = 0;
   list_init (&curr_rq->ready_list);
 }
 
