@@ -145,10 +145,17 @@ sched_tick (struct ready_queue *curr_rq, struct thread *current)
   // check if current thread vruntime is longer than ideal runtime, yield if so
   if (++curr_rq->thread_ticks >= TIME_SLICE && current->vruntime > ideal_runtime)
     {
-      // TODO: update ready queue min_vruntime
+      /*update ready queue min_vruntime*/
+      // if there are ready threads in queue
+      if(curr_rq->nr_ready >0){
       struct thread* first_thread_in_rq = list_entry(list_front(&(curr_rq->ready_list)), struct thread, elem);
       uint64_t lowest_vruntime_in_rq = first_thread_in_rq->vruntime;
       curr_rq->min_vruntime = (current->vruntime < lowest_vruntime_in_rq) ?  current->vruntime : lowest_vruntime_in_rq;
+      }
+      // if no ready threads in queue
+      else{
+        curr_rq->min_vruntime = current->vruntime;
+      }
       
       /* Start a new time slice. */
       curr_rq->thread_ticks = 0;
