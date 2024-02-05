@@ -115,9 +115,9 @@ timer_sleep (int64_t ticks)
   spinlock_acquire(&c->cpu_spinlock);
 
   add_sleeping_thread(t);
-  thread_block(&test_lock);
+  thread_block(&c->cpu_spinlock);
 
-  spinlock_release(&test_lock);
+  spinlock_release(&c->cpu_spinlock);
 
 }
 
