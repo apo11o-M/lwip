@@ -35,7 +35,7 @@ static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
 
-static void wake_check();
+static void wake_check(struct cpu *c);
 
 static void add_sleeping_thread(struct thread *t);
 
@@ -47,7 +47,6 @@ void
 timer_init (void) 
 {
   intr_register_ext (0x20 + IRQ_TIMER, timer_interrupt, "8254 Timer");
-  list_init(&get_cpu()->sleeping_threads);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -110,12 +109,16 @@ timer_sleep (int64_t ticks)
   // lock_release(&list_lock);
 
   /* Acquire the cpu's spin lock to add waiting thread */
+
+  intr_disable_push();
   struct cpu *c = get_cpu();
+  intr_enable_pop();
 
   spinlock_acquire(&c->cpu_spinlock);
 
   add_sleeping_thread(t);
   thread_block(&c->cpu_spinlock);
+
 
   spinlock_release(&c->cpu_spinlock);
 
@@ -124,14 +127,15 @@ timer_sleep (int64_t ticks)
 
 void add_sleeping_thread(struct thread *t) {
   
+  struct cpu *c = get_cpu();
   /* If the thread list is empty */
-  if (list_empty(&get_cpu()->sleeping_threads)){
-    list_push_back(&get_cpu()->sleeping_threads, &t->elem);
+  if (list_empty(&c->sleeping_threads)){
+    list_push_back(&c->sleeping_threads, &t->elem);
     return;
   }
   /* Add the thread by placing it in order of when it should be completed */
   struct list_elem *e;
-  for (e = list_begin (&get_cpu()->sleeping_threads); e != list_end (&get_cpu()->sleeping_threads);
+  for (e = list_begin (&c->sleeping_threads); e != list_end (&c->sleeping_threads);
        e = list_next (e))
     {
       struct thread *t2 = list_entry (e, struct thread, elem);
@@ -229,41 +233,42 @@ timer_interrupt (struct intr_frame *args UNUSED)
   /* decrement the sleep counter for each sleeping thread */
   // thread_foreach(&wake_check, NULL);
 
-  spinlock_acquire(&c->cpu_spinlock);
+  // spinlock_acquire(&c->cpu_spinlock);
 
-  wake_check();
+  wake_check(c);
 
-  spinlock_release(&c->cpu_spinlock);
+  // spinlock_release(&c->cpu_spinlock);
 
   thread_tick ();
 }
 
 /* Decrement a thread's sleep counter, and unblock it if the counter reaches 0. */
-static void wake_check(){
+static void wake_check(struct cpu *c){
   
   /* If the list is empty return */
-  if (list_empty(&get_cpu()->sleeping_threads)){
+  if (list_empty(&c->sleeping_threads)){
     return;
   }
  
 
   /* If the first element of the list is not ready, none will be so return */
-  struct thread *t = list_entry (list_begin (&get_cpu()->sleeping_threads), struct thread, elem);
+  struct thread *t = list_entry (list_begin (&c->sleeping_threads), struct thread, elem);
   if (t->when_to_wake > timer_ticks()){
     return;
   }
 
-  /* iterate through the list and check if there are any threads that need to wake */
-  struct list_elem *e;
-  for (e = list_begin (&get_cpu()->sleeping_threads); e != list_end (&get_cpu()->sleeping_threads);
-       e = list_next (e))
-    {
-      struct thread *t = list_entry (e, struct thread, elem);
-      if (t->when_to_wake <= timer_ticks()){
-        list_remove(e);
-        thread_unblock(t);
-      }
+  /* If the first element is ready, unblock it and remove it from the list */
+  struct list_elem *e = list_front(&c->sleeping_threads);
+  struct list_elem *next;
+  while (e != list_end (&c->sleeping_threads)){
+    t = list_entry (e, struct thread, elem);
+    next = list_next(e);
+    if (t->when_to_wake <= timer_ticks()){
+      list_remove(e);
+      thread_unblock(t);
     }
+    e = next;
+  }
 
 
 }
