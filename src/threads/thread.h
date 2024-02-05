@@ -102,7 +102,7 @@ struct thread
   /* Shared between thread.c and synch.c. */
   struct list_elem elem; /* List element. */
 
-   int remaining_sleep; /* The number of ticks the thread still needs to sleep for. */ 
+   int when_to_wake; /* When the thread should wake up if put to sleep */ 
    bool sleeping; /* Indicates whether or not the thread is sleeping */
 
 #ifdef USERPROG
