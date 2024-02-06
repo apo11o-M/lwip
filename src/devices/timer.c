@@ -105,7 +105,6 @@ timer_sleep (int64_t ticks)
   struct thread *t = thread_current();
   ASSERT (t->status == THREAD_RUNNING);
   t->when_to_wake = ticks + timer_ticks();
-  t->sleeping = true;
 
 
   /* Acquire the cpu's spin lock to add waiting thread */  
@@ -225,8 +224,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
       timer_settime (timer_ticks () * NSEC_PER_SEC / TIMER_FREQ);
     }
     
-  /* decrement the sleep counter for each sleeping thread */
-  // thread_foreach(&wake_check, NULL);
   spinlock_acquire(&timer_lock);
 
   wake_check(c);
@@ -238,35 +235,23 @@ timer_interrupt (struct intr_frame *args UNUSED)
   // intr_disable();
 }
 
-/* Decrement a thread's sleep counter, and unblock it if the counter reaches 0. */
+/* wake any sleeping threads that have finished sleeping */
 static void wake_check(struct cpu *c){
   
-  /* If the list is empty return */
-  if (list_empty(&sleeping_threads)){
-    return;
-  }
- 
+  /* Iterate through the sleeping threads, if there are any */
+  while (!list_empty(&sleeping_threads)){
+    struct list_elem *e = list_front(&sleeping_threads);
+    struct thread *thread = list_entry (e, struct thread, elem);
 
-  /* If the first element of the list is not ready, none will be so return */
-  struct thread *t = list_entry (list_begin (&sleeping_threads), struct thread, elem);
-  if (t->when_to_wake > timer_ticks()){
-    return;
-  }
-
-  /* If the first element is ready, unblock it and remove it from the list */
-  struct list_elem *e = list_front(&sleeping_threads);
-  struct list_elem *next;
-  while (e != list_end (&sleeping_threads)){
-    t = list_entry (e, struct thread, elem);
-    next = list_next(e);
-    if (t->when_to_wake <= timer_ticks()){
+    /* Since the list is sorted by wake time, either wake the current thread or return */
+    if (thread->when_to_wake <= timer_ticks()){
       list_remove(e);
-      thread_unblock(t);
+      thread_unblock(thread);
     }
-    e = next;
+    else{
+      return;
+    }
   }
-
-
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
