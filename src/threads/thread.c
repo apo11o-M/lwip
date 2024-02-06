@@ -556,8 +556,8 @@ init_boot_thread (struct thread *boot_thread, struct cpu *cpu)
   boot_thread->cpu = cpu;
   cpu->rq.curr = boot_thread;
   /* Init sleeping thread list */
-  list_init (&cpu->sleeping_threads);
-  spinlock_init (&cpu->cpu_spinlock);
+  // list_init (&cpu->sleeping_threads);
+  // spinlock_init (&cpu->cpu_spinlock);
 }
 
 /* Does basic initialization of T as a blocked thread named
