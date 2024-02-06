@@ -108,9 +108,7 @@ timer_sleep (int64_t ticks)
 
 
   /* Acquire the cpu's spin lock to add waiting thread */  
-
   spinlock_acquire(&timer_lock);
-
   add_sleeping_thread(t);
   thread_block(&timer_lock);
   
@@ -122,11 +120,7 @@ timer_sleep (int64_t ticks)
 void add_sleeping_thread(struct thread *t) {
   
   struct cpu *c = get_cpu();
-  /* If the thread list is empty */
-  if (list_empty(&sleeping_threads)){
-    list_push_back(&sleeping_threads, &t->elem);
-    return;
-  }
+  
   /* Add the thread by placing it in order of when it should be completed */
   struct list_elem *e;
   for (e = list_begin (&sleeping_threads); e != list_end (&sleeping_threads);
@@ -138,8 +132,9 @@ void add_sleeping_thread(struct thread *t) {
         return;
       }
     }
-  
 
+    /* If there are no threads with a longer sleep time, add this thread to the back */
+    list_push_back(&sleeping_threads, &t->elem);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -224,6 +219,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
       timer_settime (timer_ticks () * NSEC_PER_SEC / TIMER_FREQ);
     }
     
+  
   spinlock_acquire(&timer_lock);
 
   wake_check(c);
@@ -234,6 +230,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
 
   // intr_disable();
 }
+
 
 /* wake any sleeping threads that have finished sleeping */
 static void wake_check(struct cpu *c){
