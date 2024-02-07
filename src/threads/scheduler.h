@@ -39,6 +39,7 @@ struct ready_queue
   unsigned long nr_ready;     /* number of elements in ready_list.
                                  Allows O(1) access. */
   uint64_t min_vruntime; /* minimum vruntime across owned threads */
+  uint64_t cpu_load; /* sum of the weights of all threads in this queue */
 };
 
 void sched_init (struct ready_queue *);
@@ -47,5 +48,7 @@ void sched_yield (struct ready_queue *, struct thread *);
 struct thread *sched_pick_next (struct ready_queue *);
 enum sched_return_action sched_tick (struct ready_queue *, struct thread *);
 void sched_block (struct ready_queue *, struct thread *);
+
+void sched_load_balance(void);
 
 #endif /* THREADS_SCHEDULER_H_ */

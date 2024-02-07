@@ -57,8 +57,6 @@ static tid_t allocate_tid (void);
 static struct thread *do_thread_create (const char *, int, thread_func *, void *);
 static void init_boot_thread (struct thread *boot_thread, struct cpu *cpu);
 static void init_thread (struct thread *t, const char *name, int nice);
-static void lock_own_ready_queue (void);
-static void unlock_own_ready_queue (void);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -357,7 +355,7 @@ thread_tid (void)
  * preempted and possibly migrated to another CPU once load balancing is 
  * implemented.
  */
-static void
+void
 lock_own_ready_queue (void)
 {
   intr_disable_push ();
@@ -365,7 +363,7 @@ lock_own_ready_queue (void)
   intr_enable_pop ();
 }
 
-static void
+void
 unlock_own_ready_queue (void)
 {
   spinlock_release (&get_cpu ()->rq.lock);
@@ -480,6 +478,8 @@ idle (void *idle_started_ UNUSED)
        *
        * The baseline implementation does not ensure this.
        */
+      sched_load_balance();
+
       thread_block (NULL);
 
       /* Re-enable interrupts and wait for the next one.

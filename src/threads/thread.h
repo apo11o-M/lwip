@@ -140,7 +140,10 @@ void thread_foreach (thread_action_func *, void *);
 int thread_get_nice (void);
 void thread_set_nice (int);
 
- 	
+// make it non-static so that it can be used in scheduler.c for load balancing
+void lock_own_ready_queue (void);
+void unlock_own_ready_queue (void);
+
 static const uint32_t prio_to_weight[40] =
   {
     /* -20 */    88761, 71755, 56483, 46273, 36291,
