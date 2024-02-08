@@ -91,6 +91,8 @@ struct thread
   char name[THREAD_NAME_MAX]; /* Name (for debugging purposes). */
   uint8_t *stack; /* Saved stack pointer. */
   int nice; /* Nice value. */
+  uint64_t vruntime; /* virtual runtime. */
+  uint64_t vruntime_0; /* initial virtual runtime. */
   struct list_elem allelem; /* List element for all threads list. */
 
   struct cpu *cpu; /* Points to the CPU this thread is currently bound to.
@@ -136,5 +138,21 @@ typedef void thread_action_func (struct thread *t, void *aux);
 void thread_foreach (thread_action_func *, void *);
 int thread_get_nice (void);
 void thread_set_nice (int);
+
+// make it non-static so that it can be used in scheduler.c for load balancing
+void lock_own_ready_queue (void);
+void unlock_own_ready_queue (void);
+
+static const uint32_t prio_to_weight[40] =
+  {
+    /* -20 */    88761, 71755, 56483, 46273, 36291,
+    /* -15 */    29154, 23254, 18705, 14949, 11916,
+    /* -10 */    9548, 7620, 6100, 4904, 3906,
+    /*  -5 */    3121, 2501, 1991, 1586, 1277,
+    /*   0 */    1024, 820, 655, 526, 423,
+    /*   5 */    335, 272, 215, 172, 137,
+    /*  10 */    110, 87, 70, 56, 45,
+    /*  15 */    36, 29, 23, 18, 15,
+  };
 
 #endif /* threads/thread.h */

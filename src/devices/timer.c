@@ -232,7 +232,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
   // intr_disable();
 }
 
-
 /* wake any sleeping threads that have finished sleeping */
 static void wake_check(struct cpu *c){
   
@@ -248,6 +247,7 @@ static void wake_check(struct cpu *c){
     }
     else{
       return;
+
     }
   }
 }
@@ -300,8 +300,11 @@ real_time_sleep (int64_t num, int32_t denom)
   ASSERT (intr_get_level () == INTR_ON);
   if (ticks > 0)
     {
+      // Sleep for the appropriate number of whole ticks
       timer_sleep (ticks); 
-      busy_wait ((num * TIMER_FREQ / denom) % 1);
+
+      // Delay for the remaining time
+      real_time_delay(num % denom, denom);
     }
   else 
     {
