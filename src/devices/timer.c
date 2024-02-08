@@ -35,8 +35,7 @@ static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
-
-static void wake_check(struct cpu *c);
+static void wake_check(void);
 
 static void add_sleeping_thread(struct thread *t);
 
@@ -117,10 +116,7 @@ timer_sleep (int64_t ticks)
 }
 
 
-void add_sleeping_thread(struct thread *t) {
-  
-  struct cpu *c = get_cpu();
-  
+void add_sleeping_thread(struct thread *t) {  
   /* Add the thread by placing it in order of when it should be completed */
   struct list_elem *e;
   for (e = list_begin (&sleeping_threads); e != list_end (&sleeping_threads);
@@ -221,8 +217,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
     
   
   spinlock_acquire(&timer_lock);
-
-  wake_check(c);
+  wake_check();
   spinlock_release(&timer_lock);
   
   thread_tick();
@@ -233,7 +228,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
 }
 
 /* wake any sleeping threads that have finished sleeping */
-static void wake_check(struct cpu *c){
+static void wake_check(void){
   
   /* Start iterating through the sleeping threads, if there are any */
   while (!list_empty(&sleeping_threads)){
