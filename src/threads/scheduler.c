@@ -4,7 +4,7 @@
 #include "list.h"
 #include "threads/spinlock.h"
 #include <debug.h>
-
+#include <stdio.h>
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
 
@@ -82,9 +82,25 @@ sched_unblock (struct ready_queue *rq_to_add, struct thread *t, int initial)
 void
 sched_yield (struct ready_queue *curr_rq, struct thread *current)
 {
+  // printf("on yield ticks: %d\n", curr_rq->thread_ticks);
+  // current->vruntime += curr_rq->thread_ticks * prio_to_weight[0] / prio_to_weight[current->nice];
+  current->vruntime += 1 * prio_to_weight[0] / prio_to_weight[current->nice + 20];
+  printf("vrun %lld\n",current->vruntime);
+  // if list is not empty
+  // insert list in sorted fashion by vruntime
+  if(curr_rq->nr_ready > 0){
+    struct list_elem* curr_elem = list_front(&curr_rq->ready_list);
+    while(curr_elem != list_tail(&curr_rq->ready_list) && current->vruntime > list_entry(curr_elem, struct thread, elem)->vruntime){
+      curr_elem = list_next(curr_elem);
+    }
+    list_insert(curr_elem, &current->elem);
+  }
+  else{
   list_push_back (&curr_rq->ready_list, &current->elem);
+  }
   curr_rq->nr_ready ++;
 }
+
 
 /* Called from next_thread_to_run ().
    Find the next thread to run and remove it from the ready list
@@ -115,7 +131,7 @@ sched_pick_next (struct ready_queue *curr_rq)
 static void
 sum_weights (struct thread *t, void *aux)
 {
-  *(int*) aux = *(int*) aux + prio_to_weight[t->nice];
+  *(int*) aux = *(int*) aux + prio_to_weight[t->nice + 20];
 }
 
 /* Called from thread_tick ().
@@ -131,19 +147,15 @@ enum sched_return_action
 sched_tick (struct ready_queue *curr_rq, struct thread *current)
 {
 
-  // update virtual runtime
-  current->vruntime = current->vruntime_0 + curr_rq->thread_ticks * prio_to_weight[0] / prio_to_weight[current->nice];
-
-
   // calculate ideal runtime
   int sum_of_weights = 0;
   thread_foreach(sum_weights, &sum_of_weights);
-  sum_of_weights += prio_to_weight[current->nice];
-  uint64_t ideal_runtime = 4000000 * (list_size(&(curr_rq->ready_list)) + 1) * prio_to_weight[current->nice] / sum_of_weights;
-
+  sum_of_weights += prio_to_weight[current->nice +20];
+  uint64_t ideal_runtime = 4000000 * (list_size(&(curr_rq->ready_list)) + 1) * prio_to_weight[current->nice + 20] / sum_of_weights;
+  printf("%d\n", curr_rq->thread_ticks);
   /* Enforce preemption. */
   // check if current thread vruntime is longer than ideal runtime, yield if so
-  if (++curr_rq->thread_ticks >= TIME_SLICE && current->vruntime > ideal_runtime)
+  if (++curr_rq->thread_ticks > ideal_runtime)
     {
       /*update ready queue min_vruntime*/
       // if there are ready threads in queue
