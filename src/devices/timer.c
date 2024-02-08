@@ -223,9 +223,10 @@ timer_interrupt (struct intr_frame *args UNUSED)
   spinlock_acquire(&timer_lock);
 
   wake_check(c);
+  spinlock_release(&timer_lock);
+  
   thread_tick();
 
-  spinlock_release(&timer_lock);
   // spinlock_release(&c->cpu_spinlock);
 
   // intr_disable();
@@ -235,7 +236,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
 /* wake any sleeping threads that have finished sleeping */
 static void wake_check(struct cpu *c){
   
-  /* Iterate through the sleeping threads, if there are any */
+  /* Start iterating through the sleeping threads, if there are any */
   while (!list_empty(&sleeping_threads)){
     struct list_elem *e = list_front(&sleeping_threads);
     struct thread *thread = list_entry (e, struct thread, elem);
