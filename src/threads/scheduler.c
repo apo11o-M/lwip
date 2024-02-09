@@ -130,7 +130,7 @@ int sum_ready_weights(struct ready_queue *rq)
   struct list_elem *e;
   for (e = list_begin(&rq->ready_list); e != list_end(&rq->ready_list); e = list_next(e))
   {
-    struct thread *t = list_entry(e, struct thread, allelem);
+    struct thread *t = list_entry(e, struct thread, elem);
     sum += prio_to_weight[t->nice + 20];
   }
   return sum;
