@@ -116,6 +116,7 @@ sched_pick_next(struct ready_queue *curr_rq)
   if (list_empty(&curr_rq->ready_list))
     return NULL;
   struct thread *ret = list_entry(list_pop_front(&curr_rq->ready_list), struct thread, elem);
+  ret->last_update = timer_gettime();
   curr_rq->nr_ready--;
   return ret;
 }
