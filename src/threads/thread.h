@@ -92,7 +92,7 @@ struct thread
   uint8_t *stack; /* Saved stack pointer. */
   int nice; /* Nice value. */
   uint64_t vruntime; /* virtual runtime. */
-  uint64_t vruntime_0; /* initial virtual runtime. */
+  uint64_t last_update; /* time of last update to vruntime (in nanoseconds). */
   struct list_elem allelem; /* List element for all threads list. */
 
   struct cpu *cpu; /* Points to the CPU this thread is currently bound to.

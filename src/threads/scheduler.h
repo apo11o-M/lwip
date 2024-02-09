@@ -47,5 +47,7 @@ void sched_yield (struct ready_queue *, struct thread *);
 struct thread *sched_pick_next (struct ready_queue *);
 enum sched_return_action sched_tick (struct ready_queue *, struct thread *);
 void sched_block (struct ready_queue *, struct thread *);
+int sum_ready_weights (struct ready_queue* rq);
+void update_vruntime(struct thread *current);
 
 #endif /* THREADS_SCHEDULER_H_ */

@@ -5,8 +5,9 @@
 #include "threads/spinlock.h"
 #include <debug.h>
 #include <stdio.h>
+#include "devices/timer.h"
 /* Scheduling. */
-#define TIME_SLICE 4            /* # of timer ticks to give each thread. */
+#define TIME_SLICE 4 /* # of timer ticks to give each thread. */
 
 /*
  * In the provided baseline implementation, threads are kept in an unsorted list.
@@ -20,16 +21,15 @@
  */
 
 /* Called from thread_init () and thread_init_on_ap ().
-   Initializes data structures used by the scheduler. 
- 
+   Initializes data structures used by the scheduler.
+
    This function is called very early.  It is unsafe to call
    thread_current () at this point.
  */
-void
-sched_init (struct ready_queue *curr_rq)
+void sched_init(struct ready_queue *curr_rq)
 {
   curr_rq->min_vruntime = 0;
-  list_init (&curr_rq->ready_list);
+  list_init(&curr_rq->ready_list);
 }
 
 /* Called from thread.c:wake_up_new_thread () and
@@ -44,33 +44,33 @@ sched_init (struct ready_queue *curr_rq)
    be rescheduled when this function returns, else returns
    RETURN_NONE */
 enum sched_return_action
-sched_unblock (struct ready_queue *rq_to_add, struct thread *t, int initial)
+sched_unblock(struct ready_queue *rq_to_add, struct thread *t, int initial)
 {
 
   /* Update thread's vruntime_0*/
   // if called from wake_up_new_thread
-  if (initial == 1){
+  if (initial == 1)
+  {
     // assign threads initial virtual runtime to the cpu's minimum virtual runtime
-    t->vruntime_0=t->cpu->rq.min_vruntime;
+    t->vruntime = t->cpu->rq.min_vruntime;
   }
   // if called from thread_unblock
-  else {
+  else
+  {
     // assign to maximum between threads current virtual runtime and cpu's min_runtime - 2E7
-    uint64_t adjusted_min_vruntime = t->cpu->rq.min_vruntime - 20000000;
-    t->vruntime_0 = (t->vruntime > adjusted_min_vruntime) ?  t->vruntime : adjusted_min_vruntime;
+    uint64_t adjusted_min_vruntime = t->cpu->rq.min_vruntime - 2000000;
+    t->vruntime = (t->vruntime > adjusted_min_vruntime) ? t->vruntime : adjusted_min_vruntime;
   }
-  // assign vruntime to initial vruntime
-  t->vruntime = t->vruntime_0;
+  t->last_update = timer_gettime();
 
-
-  list_push_back (&rq_to_add->ready_list, &t->elem);
+  list_push_back(&rq_to_add->ready_list, &t->elem);
   rq_to_add->nr_ready++;
 
   /* CPU is idle */
   if (!rq_to_add->curr)
-    {
-      return RETURN_YIELD;
-    }
+  {
+    return RETURN_YIELD;
+  }
   return RETURN_NONE;
 }
 
@@ -79,28 +79,26 @@ sched_unblock (struct ready_queue *rq_to_add, struct thread *t, int initial)
 
    Current ready queue is locked upon entry.
  */
-void
-sched_yield (struct ready_queue *curr_rq, struct thread *current)
+void sched_yield(struct ready_queue *curr_rq, struct thread *current)
 {
-  // printf("on yield ticks: %d\n", curr_rq->thread_ticks);
-  // current->vruntime += curr_rq->thread_ticks * prio_to_weight[0] / prio_to_weight[current->nice];
-  current->vruntime += 1 * prio_to_weight[0] / prio_to_weight[current->nice + 20];
-  printf("vrun %lld\n",current->vruntime);
+  update_vruntime(current);
   // if list is not empty
-  // insert list in sorted fashion by vruntime
-  if(curr_rq->nr_ready > 0){
-    struct list_elem* curr_elem = list_front(&curr_rq->ready_list);
-    while(curr_elem != list_tail(&curr_rq->ready_list) && current->vruntime > list_entry(curr_elem, struct thread, elem)->vruntime){
+  // insert list in sorted fashion by ascending vruntime
+  if (curr_rq->nr_ready > 0)
+  {
+    struct list_elem *curr_elem = list_front(&curr_rq->ready_list);
+    while (curr_elem != list_tail(&curr_rq->ready_list) && current->vruntime > list_entry(curr_elem, struct thread, elem)->vruntime)
+    {
       curr_elem = list_next(curr_elem);
     }
     list_insert(curr_elem, &current->elem);
   }
-  else{
-  list_push_back (&curr_rq->ready_list, &current->elem);
+  else
+  {
+    list_push_back(&curr_rq->ready_list, &current->elem);
   }
-  curr_rq->nr_ready ++;
+  curr_rq->nr_ready++;
 }
-
 
 /* Called from next_thread_to_run ().
    Find the next thread to run and remove it from the ready list
@@ -112,26 +110,36 @@ sched_yield (struct ready_queue *curr_rq, struct thread *current)
    Called with current ready queue locked.
  */
 struct thread *
-sched_pick_next (struct ready_queue *curr_rq)
+sched_pick_next(struct ready_queue *curr_rq)
 {
 
-  if (list_empty (&curr_rq->ready_list))
+  if (list_empty(&curr_rq->ready_list))
     return NULL;
-
-  // TODO: Modify to select next thread based on lowest vruntime, call for_each_thread
-  struct thread *ret = list_entry(list_pop_front (&curr_rq->ready_list), struct thread, elem);
+  struct thread *ret = list_entry(list_pop_front(&curr_rq->ready_list), struct thread, elem);
   curr_rq->nr_ready--;
   return ret;
 }
 
-
-/* 
+/*
  * function to sum all the weights of threads in running queue
  */
-static void
-sum_weights (struct thread *t, void *aux)
+int sum_ready_weights(struct ready_queue *rq)
 {
-  *(int*) aux = *(int*) aux + prio_to_weight[t->nice + 20];
+  int sum = 0;
+  struct list_elem *e;
+  for (e = list_begin(&rq->ready_list); e != list_end(&rq->ready_list); e = list_next(e))
+  {
+    struct thread *t = list_entry(e, struct thread, allelem);
+    sum += prio_to_weight[t->nice + 20];
+  }
+  return sum;
+}
+
+// update vruntime of passed thread
+void update_vruntime(struct thread *current)
+{
+  current->vruntime += (timer_gettime() - current->last_update) * prio_to_weight[0] / prio_to_weight[current->nice + 20];
+  current->last_update = timer_gettime();
 }
 
 /* Called from thread_tick ().
@@ -144,46 +152,47 @@ sum_weights (struct thread *t, void *aux)
  * when this function returns, else returns RETURN_NONE.
  */
 enum sched_return_action
-sched_tick (struct ready_queue *curr_rq, struct thread *current)
+sched_tick(struct ready_queue *curr_rq, struct thread *current)
 {
-
   // calculate ideal runtime
-  int sum_of_weights = 0;
-  thread_foreach(sum_weights, &sum_of_weights);
-  sum_of_weights += prio_to_weight[current->nice +20];
-  uint64_t ideal_runtime = 4000000 * (list_size(&(curr_rq->ready_list)) + 1) * prio_to_weight[current->nice + 20] / sum_of_weights;
-  printf("%d\n", curr_rq->thread_ticks);
+  int sum_of_weights = sum_ready_weights(curr_rq);
+  // // include current thread weight
+  sum_of_weights += prio_to_weight[current->nice + 20];
+  // TODO: exclude idle thread weight?
+  unsigned long ideal_runtime = (4 * (curr_rq->nr_ready + 1) * prio_to_weight[current->nice + 20]);
   /* Enforce preemption. */
   // check if current thread vruntime is longer than ideal runtime, yield if so
-  if (++curr_rq->thread_ticks > ideal_runtime)
+  if (((timer_gettime() - current->last_update) / 1000000) * sum_of_weights >= (uint64_t)ideal_runtime)
+  {
+    /*update ready queue min_vruntime*/
+    // if there are ready threads in queue
+    if (curr_rq->nr_ready > 0)
     {
-      /*update ready queue min_vruntime*/
-      // if there are ready threads in queue
-      if(curr_rq->nr_ready >0){
-      struct thread* first_thread_in_rq = list_entry(list_front(&(curr_rq->ready_list)), struct thread, elem);
+      struct thread *first_thread_in_rq = list_entry(list_front(&(curr_rq->ready_list)), struct thread, elem);
       uint64_t lowest_vruntime_in_rq = first_thread_in_rq->vruntime;
-      curr_rq->min_vruntime = (current->vruntime < lowest_vruntime_in_rq) ?  current->vruntime : lowest_vruntime_in_rq;
-      }
-      // if no ready threads in queue
-      else{
-        curr_rq->min_vruntime = current->vruntime;
-      }
-      
-      /* Start a new time slice. */
-      curr_rq->thread_ticks = 0;
-
-      return RETURN_YIELD;
+      curr_rq->min_vruntime = (current->vruntime < lowest_vruntime_in_rq) ? current->vruntime : lowest_vruntime_in_rq;
     }
+    // if no ready threads in queue
+    else
+    {
+      curr_rq->min_vruntime = current->vruntime;
+    }
+
+    /* Start a new time slice. */
+    curr_rq->thread_ticks = 0;
+
+    return RETURN_YIELD;
+  }
   return RETURN_NONE;
 }
 
 /* Called from thread_block (). The base scheduler does
-   not need to do anything here, but your scheduler may. 
+   not need to do anything here, but your scheduler may.
 
    'cur' is the current thread, about to block.
  */
-void
-sched_block (struct ready_queue *rq UNUSED, struct thread *current UNUSED)
+void sched_block(struct ready_queue *rq UNUSED, struct thread *current)
 {
-  ;
+
+  update_vruntime(current);
 }
