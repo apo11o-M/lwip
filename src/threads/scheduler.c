@@ -197,10 +197,11 @@ sched_tick(struct ready_queue *curr_rq, struct thread *current)
   // include current thread weight
   sum_of_weights += prio_to_weight[current->nice + 20];
   update_minvruntime(curr_rq, current);
-  // unsigned long ideal_runtime = (400000 * (curr_rq->nr_ready + 1) * prio_to_weight[current->nice + 20]);
+  // unsigned long ideal_runtime = (4000000.0 * (double)(curr_rq->nr_ready + 1.0) * prio_to_weight[current->nice + 20]);
+  uint64_t ideal_runtime = ((uint64_t)4000000 * (curr_rq->nr_ready + 1) * prio_to_weight[current->nice + 20]);
   /* Enforce preemption. */
   // check if current thread vruntime is longer than ideal runtime, yield if so
-  if (((timer_gettime() - current->last_update) / 10) * sum_of_weights >= (400000 * (curr_rq->nr_ready + 1) * prio_to_weight[current->nice + 20]))
+  if (((timer_gettime() - current->last_update)) * sum_of_weights >= ideal_runtime)
   {
 
     /* Start a new time slice. */
