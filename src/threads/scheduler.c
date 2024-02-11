@@ -261,8 +261,13 @@ void sched_load_balance(void)
   // make sure to not pull tasks from oneself as it's already the busiest
   if (busiest_cpu_id == get_cpu()->id) return;
 
-  lock_own_ready_queue();
-  spinlock_acquire(&cpus[busiest_cpu_id].rq.lock);
+  if (busiest_cpu_id < get_cpu()->id) {
+    spinlock_acquire(&cpus[busiest_cpu_id].rq.lock);
+    lock_own_ready_queue();
+  } else {
+    lock_own_ready_queue();
+    spinlock_acquire(&cpus[busiest_cpu_id].rq.lock);
+  }
 
   // by this point, all cpus' curr_load are updated
   uint64_t imbalance = (busiest_cpu_load - get_cpu()->rq.cpu_load) / 2;
@@ -285,6 +290,11 @@ void sched_load_balance(void)
     }
   }
 
-  spinlock_release(&cpus[busiest_cpu_id].rq.lock);
-  unlock_own_ready_queue();
+  if (busiest_cpu_id < get_cpu()->id) {
+    spinlock_release(&cpus[busiest_cpu_id].rq.lock);
+    unlock_own_ready_queue();
+  } else {
+    unlock_own_ready_queue();
+    spinlock_release(&cpus[busiest_cpu_id].rq.lock);
+  }
 }
