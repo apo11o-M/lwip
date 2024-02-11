@@ -32,6 +32,29 @@ void sched_init(struct ready_queue *curr_rq)
   list_init(&curr_rq->ready_list);
 }
 
+
+void insert_sorted(struct ready_queue *curr_rq, struct thread *current, bool new_thread UNUSED)
+{
+    // if list is not empty
+  // insert list in sorted fashion by ascending vruntime
+  if (curr_rq->nr_ready > 0)
+  {
+    struct list_elem *curr_elem = list_front(&curr_rq->ready_list);
+    while (curr_elem != list_tail(&curr_rq->ready_list) && 
+      (((current->vruntime) > list_entry(curr_elem, struct thread, elem)->vruntime) || 
+        (((current->vruntime) == list_entry(curr_elem, struct thread, elem)->vruntime && 
+            (current->tid) > list_entry(curr_elem, struct thread, elem)->tid))))
+    {
+      curr_elem = list_next(curr_elem);
+    }
+    list_insert(curr_elem, &current->elem);
+  }
+  else
+  {
+    list_push_back(&curr_rq->ready_list, &current->elem);
+  }
+  curr_rq->nr_ready++;
+}
 /* Called from thread.c:wake_up_new_thread () and
    thread_unblock () with the CPU's ready queue locked.
    rq is the ready queue that t should be added to when
@@ -46,7 +69,7 @@ void sched_init(struct ready_queue *curr_rq)
 enum sched_return_action
 sched_unblock(struct ready_queue *rq_to_add, struct thread *t, int initial)
 {
-
+  bool should_yield = false;
   /* Update thread's vruntime_0*/
   // if called from wake_up_new_thread
   if (initial == 1)
@@ -57,17 +80,19 @@ sched_unblock(struct ready_queue *rq_to_add, struct thread *t, int initial)
   // if called from thread_unblock
   else
   {
-    // assign to maximum between threads current virtual runtime and cpu's min_runtime - 2E7
-    uint64_t adjusted_min_vruntime = t->cpu->rq.min_vruntime - 2000000;
-    t->vruntime = (t->vruntime > adjusted_min_vruntime) ? t->vruntime : adjusted_min_vruntime;
+    // assign to maximum between threads current virtual runtime and cpu's min_runtime - 2E8
+    uint64_t adjusted_min_vruntime = t->cpu->rq.min_vruntime - 20000000;
+    t->vruntime = (t->vruntime > adjusted_min_vruntime || t->cpu->rq.min_vruntime <= 20000000) ? t->vruntime : adjusted_min_vruntime;
+    should_yield = true;
   }
   t->last_update = timer_gettime();
 
-  list_push_back(&rq_to_add->ready_list, &t->elem);
-  rq_to_add->nr_ready++;
+
+  // insert new thread into ready queue
+  insert_sorted(rq_to_add, t, (bool)initial);
 
   /* CPU is idle */
-  if (!rq_to_add->curr)
+  if (!rq_to_add->curr || should_yield)
   {
     return RETURN_YIELD;
   }
@@ -82,22 +107,9 @@ sched_unblock(struct ready_queue *rq_to_add, struct thread *t, int initial)
 void sched_yield(struct ready_queue *curr_rq, struct thread *current)
 {
   update_vruntime(current);
-  // if list is not empty
-  // insert list in sorted fashion by ascending vruntime
-  if (curr_rq->nr_ready > 0)
-  {
-    struct list_elem *curr_elem = list_front(&curr_rq->ready_list);
-    while (curr_elem != list_tail(&curr_rq->ready_list) && current->vruntime > list_entry(curr_elem, struct thread, elem)->vruntime)
-    {
-      curr_elem = list_next(curr_elem);
-    }
-    list_insert(curr_elem, &current->elem);
-  }
-  else
-  {
-    list_push_back(&curr_rq->ready_list, &current->elem);
-  }
-  curr_rq->nr_ready++;
+  insert_sorted(curr_rq, current, false);
+  update_minvruntime(curr_rq, current);
+  
 }
 
 /* Called from next_thread_to_run ().
@@ -139,10 +151,35 @@ int sum_ready_weights(struct ready_queue *rq)
 // update vruntime of passed thread
 void update_vruntime(struct thread *current)
 {
-  current->vruntime += (timer_gettime() - current->last_update) * prio_to_weight[0] / prio_to_weight[current->nice + 20];
+  current->vruntime += (timer_gettime() - current->last_update) * prio_to_weight[0+20] / prio_to_weight[current->nice + 20];
   current->last_update = timer_gettime();
 }
 
+/*update ready queue min_vruntime*/
+void update_minvruntime(struct ready_queue *curr_rq, struct thread *current){
+
+    // iterate through ready queue
+
+
+    // if there are ready threads in queue
+    uint64_t new_min_vruntime;
+    if (curr_rq->nr_ready > 0)
+    {
+      struct thread *first_thread_in_rq = list_entry(list_front(&(curr_rq->ready_list)), struct thread, elem);
+      uint64_t lowest_vruntime_in_rq = first_thread_in_rq->vruntime;
+      new_min_vruntime = (current->vruntime < lowest_vruntime_in_rq) ? current->vruntime : lowest_vruntime_in_rq;
+    }
+    // if no ready threads in queue
+    else
+    {
+      new_min_vruntime = current->vruntime;
+    }
+
+    // if new suggested minimum vruntime is larger than current min vruntime
+    if (new_min_vruntime > curr_rq->min_vruntime){
+      curr_rq->min_vruntime = new_min_vruntime;
+    }
+}
 /* Called from thread_tick ().
  * Ready queue rq is locked upon entry.
  *
@@ -157,27 +194,14 @@ sched_tick(struct ready_queue *curr_rq, struct thread *current)
 {
   // calculate ideal runtime
   int sum_of_weights = sum_ready_weights(curr_rq);
-  // // include current thread weight
+  // include current thread weight
   sum_of_weights += prio_to_weight[current->nice + 20];
-  // TODO: exclude idle thread weight?
-  unsigned long ideal_runtime = (4 * (curr_rq->nr_ready + 1) * prio_to_weight[current->nice + 20]);
+  update_minvruntime(curr_rq, current);
+  // unsigned long ideal_runtime = (400000 * (curr_rq->nr_ready + 1) * prio_to_weight[current->nice + 20]);
   /* Enforce preemption. */
   // check if current thread vruntime is longer than ideal runtime, yield if so
-  if (((timer_gettime() - current->last_update) / 1000000) * sum_of_weights >= (uint64_t)ideal_runtime)
+  if (((timer_gettime() - current->last_update) / 10) * sum_of_weights >= (400000 * (curr_rq->nr_ready + 1) * prio_to_weight[current->nice + 20]))
   {
-    /*update ready queue min_vruntime*/
-    // if there are ready threads in queue
-    if (curr_rq->nr_ready > 0)
-    {
-      struct thread *first_thread_in_rq = list_entry(list_front(&(curr_rq->ready_list)), struct thread, elem);
-      uint64_t lowest_vruntime_in_rq = first_thread_in_rq->vruntime;
-      curr_rq->min_vruntime = (current->vruntime < lowest_vruntime_in_rq) ? current->vruntime : lowest_vruntime_in_rq;
-    }
-    // if no ready threads in queue
-    else
-    {
-      curr_rq->min_vruntime = current->vruntime;
-    }
 
     /* Start a new time slice. */
     curr_rq->thread_ticks = 0;
@@ -192,8 +216,9 @@ sched_tick(struct ready_queue *curr_rq, struct thread *current)
 
    'cur' is the current thread, about to block.
  */
-void sched_block(struct ready_queue *rq UNUSED, struct thread *current)
+void sched_block(struct ready_queue *rq, struct thread *current)
 {
 
   update_vruntime(current);
+  update_minvruntime(rq, current);
 }

@@ -6,9 +6,9 @@ Functionality of advanced scheduler:
 3	cfs-delayed-tick
 3	cfs-sleeper
 3	cfs-short-sleeper
-3	cfs-sleeper-minvruntime
-3	cfs-new-minvruntime
-3	cfs-nice
+3	cfs-sleeper-minvruntime X
+3	cfs-new-minvruntime X
+3	cfs-nice X
 3	cfs-renice
 3	cfs-idle-unblock
 3	cfs-vruntime

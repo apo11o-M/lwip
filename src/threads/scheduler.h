@@ -49,5 +49,7 @@ enum sched_return_action sched_tick (struct ready_queue *, struct thread *);
 void sched_block (struct ready_queue *, struct thread *);
 int sum_ready_weights (struct ready_queue* rq);
 void update_vruntime(struct thread *current);
+void update_minvruntime(struct ready_queue *curr_rq, struct thread *current);
+void insert_sorted(struct ready_queue *curr_rq, struct thread *current, bool new_thread);
 
 #endif /* THREADS_SCHEDULER_H_ */
