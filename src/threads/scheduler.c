@@ -1,6 +1,7 @@
 #include "threads/scheduler.h"
 #include "threads/cpu.h"
 #include "threads/interrupt.h"
+#include "threads/thread.h"
 #include "list.h"
 #include "threads/spinlock.h"
 #include <debug.h>

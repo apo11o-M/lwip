@@ -35,7 +35,12 @@ struct cpu
   
   /* Ready queue. Owned by scheduler.c */
   struct ready_queue rq;
+
+  /* Per cpu spinlock */
+//   struct spinlock cpu_spinlock;
   
+   /* Sleeping Thread List */
+   // struct list sleeping_threads;
   /* Cpu-local storage variable; see below */
   struct cpu *cpu;
 };

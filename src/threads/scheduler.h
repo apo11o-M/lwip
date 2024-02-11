@@ -39,6 +39,7 @@ struct ready_queue
   unsigned long nr_ready;     /* number of elements in ready_list.
                                  Allows O(1) access. */
   uint64_t min_vruntime; /* minimum vruntime across owned threads */
+  uint64_t cpu_load; /* sum of the weights of all threads in this queue */
 };
 
 void sched_init (struct ready_queue *);
@@ -51,5 +52,7 @@ int sum_ready_weights (struct ready_queue* rq);
 void update_vruntime(struct thread *current);
 void update_minvruntime(struct ready_queue *curr_rq, struct thread *current);
 void insert_sorted(struct ready_queue *curr_rq, struct thread *current, bool new_thread);
+
+void sched_load_balance(void);
 
 #endif /* THREADS_SCHEDULER_H_ */
