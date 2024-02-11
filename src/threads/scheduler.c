@@ -241,26 +241,21 @@ void sched_load_balance(void)
   for (c = cpus; c < cpus + ncpu; c++) {
     spinlock_acquire(&c->rq.lock);
 
-    uint64_t curr_cpu_load = 0;
     // Further optimization can be done by updating the cpu_load whenever a
     // thread is added/removed from the ready queue
-    struct list_elem *e;
-    for (e = list_begin(&c->rq.ready_list); e != list_end(&c->rq.ready_list); e = list_next(e)) {
-      struct thread *t = list_entry(e, struct thread, elem);
-      curr_cpu_load += prio_to_weight[t->nice];
-    }
-    c->rq.cpu_load = curr_cpu_load;
-
-    if (curr_cpu_load > busiest_cpu_load) {
+    c->rq.cpu_load = sum_ready_weights(&c->rq);
+    if (c->rq.cpu_load > busiest_cpu_load) {
       busiest_cpu_load = c->rq.cpu_load;
       busiest_cpu_id = c->id;
     }
+
     spinlock_release(&c->rq.lock);
   }
 
-  // make sure to not pull tasks from oneself as it's already the busiest
+  // sanity check, make sure to not pull tasks from oneself
   if (busiest_cpu_id == get_cpu()->id) return;
 
+  // lock the ready queue of the CPU with smallest ID first to avoid deadlock
   if (busiest_cpu_id < get_cpu()->id) {
     spinlock_acquire(&cpus[busiest_cpu_id].rq.lock);
     lock_own_ready_queue();
