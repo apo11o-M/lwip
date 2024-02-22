@@ -447,14 +447,43 @@ setup_stack (void **esp)
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success){
         struct kernel_thread_frame *kf = (struct kernel_thread_frame *)((uint8_t*)t + PGSIZE - 12);
+        // count number of chars and args in cmd line
         int curr_offset = 0;
-        // while end of aux not acheived, count chars in aux
+        int num_args = 0;
         while(*(uint8_t*)(kf->aux+curr_offset) != 204){
+          if(*(char*)(kf->aux+curr_offset) == '\0'){
+            num_args++;
+          }
           curr_offset++;
         }
-        void**file_name_ptr = &kf->aux;
-        printf("aux length: %s\n", strtok_r(kf->aux, " ", (char**)file_name_ptr));
-        *esp = PHYS_BASE - 12;
+        // bottom location offset of stack
+        int stack_offset = (curr_offset+1);
+        // word align offset
+        while(stack_offset % 4 != 0){
+          stack_offset++;
+        }
+        // store beginning of args
+        void* start_addr = PHYS_BASE - stack_offset;
+        // adjust stack offset for other values and assign stack pointer
+        stack_offset += (num_args + 4) * 4;
+        *esp = PHYS_BASE - stack_offset;
+
+        // iterate through cmd line again
+        curr_offset = 0;
+        int curr_start_offset = 0;
+        while(*(uint8_t*)(kf->aux+curr_offset) != 204){
+          // if end of arg found
+          if(*(char*)(kf->aux+curr_offset) == '\0'){
+            // copy mem to data
+            memcpy(start_addr + curr_start_offset,(kf->aux + curr_start_offset), curr_offset - curr_start_offset);
+            hex_dump((uintptr_t)*esp, (void *)*esp, (uint32_t)PHYS_BASE - (uint32_t) *esp, true);
+            // reassign curr_start address
+            curr_start_offset = curr_offset + 1;
+          }
+          curr_offset++;
+        }
+        hex_dump((uintptr_t)*esp, (void *)*esp, (uint32_t)PHYS_BASE - (uint32_t) *esp, true);
+        
       }
       else
         palloc_free_page (kpage);
