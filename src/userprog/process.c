@@ -38,9 +38,6 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
-  // terminate file name before args
-  int whitespace_start = strcspn(file_name, " ");
-  memset(file_name + whitespace_start, 0x0, 1);
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, NICE_DEFAULT, start_process, fn_copy);
@@ -54,9 +51,14 @@ process_execute (const char *file_name)
 static void
 start_process (void *file_name_)
 {
-  char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
+
+  // terminate file name before args
+  memset((void*)file_name_ + strcspn(file_name_, " "), atoi("\0"), 1);
+  char *file_name = file_name_;
+
+
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
