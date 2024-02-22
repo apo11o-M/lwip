@@ -55,10 +55,9 @@ start_process (void *file_name_)
   bool success;
 
   // terminate file name before args
-  memset((void*)file_name_ + strcspn(file_name_, " "), atoi("\0"), 1);
   char *file_name = file_name_;
-
-
+  char**file_name_ptr = &file_name;
+  file_name = strtok_r(file_name, " ", file_name_ptr);
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -230,6 +229,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   /* Open executable file. */
   file = filesys_open (file_name);
+  // TEMP: Hardcode file name
+  // file = filesys_open ("echo");
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_name);
@@ -437,7 +438,6 @@ static bool
 setup_stack (void **esp) 
 {
   struct thread *t = thread_current ();
-  
   uint8_t *kpage;
   bool success = false;
 
@@ -445,8 +445,16 @@ setup_stack (void **esp)
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-      if (success)
+      if (success){
+        struct kernel_thread_frame *kf = (struct kernel_thread_frame *)((uint8_t*)t + PGSIZE - 12);
+        int curr_offset = 0;
+        // while end of aux not acheived, count chars in aux
+        while(*(uint8_t*)(kf->aux+curr_offset) != 204){
+          curr_offset++;
+        }
+        printf("aux length: %d\n", curr_offset);
         *esp = PHYS_BASE - 12;
+      }
       else
         palloc_free_page (kpage);
     }

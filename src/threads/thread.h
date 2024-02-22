@@ -135,4 +135,13 @@ void thread_foreach (thread_action_func *, void *);
 int thread_get_nice (void);
 void thread_set_nice (int);
 
+
+/* Stack frame for kernel_thread(). */
+struct kernel_thread_frame
+{
+  void *eip; /* Return address. */
+  thread_func *function; /* Function to call. */
+  void *aux; /* Auxiliary data for function. */
+};
+
 #endif /* threads/thread.h */

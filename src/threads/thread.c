@@ -37,13 +37,7 @@ static struct spinlock all_lock;
 /* Initial thread, the thread running init.c:main(). */
 static struct thread *initial_thread;
 
-/* Stack frame for kernel_thread(). */
-struct kernel_thread_frame
-{
-  void *eip; /* Return address. */
-  thread_func *function; /* Function to call. */
-  void *aux; /* Auxiliary data for function. */
-};
+
 
 static void kernel_thread_entry (thread_func *, void *aux);
 static void idle (void *aux UNUSED);
@@ -192,7 +186,6 @@ do_thread_create (const char *name, int nice, thread_func *function, void *aux)
     struct switch_entry_frame *ef;
     struct switch_threads_frame *sf;
     ASSERT (function != NULL);
-
     /* Allocate thread. */
     t = palloc_get_page (PAL_ZERO);
     if (t == NULL)
@@ -201,13 +194,11 @@ do_thread_create (const char *name, int nice, thread_func *function, void *aux)
     /* Initialize thread. */
     init_thread (t, name, nice);
     t->tid = allocate_tid ();
-
     /* Stack frame for kernel_thread(). */
     kf = alloc_frame (t, sizeof *kf);
     kf->eip = NULL;
     kf->function = function;
     kf->aux = aux;
-
     /* Stack frame for switch_entry(). */
     ef = alloc_frame (t, sizeof *ef);
     ef->eip = (void (*) (void)) kernel_thread_entry;
@@ -216,7 +207,6 @@ do_thread_create (const char *name, int nice, thread_func *function, void *aux)
     sf = alloc_frame (t, sizeof *sf);
     sf->eip = switch_entry;
     sf->ebp = 0;
-
     return t;
 }
 
