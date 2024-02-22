@@ -41,6 +41,7 @@ process_execute (const char *file_name)
   // terminate file name before args
   int whitespace_start = strcspn(file_name, " ");
   memset(file_name + whitespace_start, 0x0, 1);
+
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, NICE_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
@@ -226,9 +227,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   process_activate ();
 
   /* Open executable file. */
-  // file = filesys_open (file_name);
-  // TEMP: hardcode file name to echo
-  file = filesys_open ("echo");
+  file = filesys_open (file_name);
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_name);
