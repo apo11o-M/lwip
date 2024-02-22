@@ -474,14 +474,17 @@ setup_stack (void **esp)
         while(*(uint8_t*)(kf->aux+curr_offset) != 204){
           // if end of arg found
           if(*(char*)(kf->aux+curr_offset) == '\0'){
-            // copy mem to data
+            // copy arg to stack
             memcpy(start_addr + curr_start_offset,(kf->aux + curr_start_offset), curr_offset - curr_start_offset);
-            hex_dump((uintptr_t)*esp, (void *)*esp, (uint32_t)PHYS_BASE - (uint32_t) *esp, true);
+            // add location of arg to stack
+            strlcpy(*esp, (void*)kf->aux + curr_start_offset, 4);
             // reassign curr_start address
             curr_start_offset = curr_offset + 1;
           }
           curr_offset++;
         }
+
+
         hex_dump((uintptr_t)*esp, (void *)*esp, (uint32_t)PHYS_BASE - (uint32_t) *esp, true);
         
       }
