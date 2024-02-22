@@ -436,6 +436,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack (void **esp) 
 {
+  struct thread *t = thread_current ();
+  
   uint8_t *kpage;
   bool success = false;
 
@@ -444,7 +446,7 @@ setup_stack (void **esp)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
-        *esp = PHYS_BASE -12;
+        *esp = PHYS_BASE - 12;
       else
         palloc_free_page (kpage);
     }
