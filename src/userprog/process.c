@@ -452,7 +452,8 @@ setup_stack (void **esp)
         while(*(uint8_t*)(kf->aux+curr_offset) != 204){
           curr_offset++;
         }
-        printf("aux length: %d\n", curr_offset);
+        void**file_name_ptr = &kf->aux;
+        printf("aux length: %s\n", strtok_r(kf->aux, " ", (char**)file_name_ptr));
         *esp = PHYS_BASE - 12;
       }
       else
