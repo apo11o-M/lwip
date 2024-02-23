@@ -102,12 +102,24 @@ struct thread
   /* Shared between thread.c and synch.c. */
   struct list_elem elem; /* List element. */
 
+  struct list child_list; /* List of files opened by the process. */
+  int exit_status; /* Exit status of the process. */
+  void * parent; /* Parent thread id. */
+
+
 #ifdef USERPROG
   /* Owned by userprog/process.c. */
   uint32_t *pagedir; /* Page directory. */
 #endif
   /* Owned by thread.c. */
   unsigned magic; /* Detects stack overflow. */
+};
+
+struct child_process {
+  tid_t tid;
+  int status;
+  struct semaphore sema;
+  struct list_elem elem;
 };
 
 void thread_init (void);

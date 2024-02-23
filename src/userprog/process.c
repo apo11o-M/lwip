@@ -21,6 +21,8 @@
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
+
+
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -43,6 +45,18 @@ process_execute (const char *file_name)
   tid = thread_create (file_name, NICE_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
+
+  struct list_elem *e;
+  struct thread *cur = thread_current();
+  struct child_process *cp;
+  for (e = list_begin(&cur->child_list); e != list_end(&cur->child_list); e = list_next(e)){
+    cp = list_entry(e, struct child_process, elem);
+    if (cp->tid == cur->tid){
+      break;
+    }
+  }
+
+  sema_down(&cp->sema);
   return tid;
 }
 
@@ -57,7 +71,6 @@ start_process (void *file_name_)
   // terminate file name before args
   char *file_name = file_name_;
   char**file_name_ptr = &file_name;
-  file_name = strtok_r(file_name, " ", file_name_ptr);
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -66,10 +79,32 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
 
+
+  // signal parent that load is done
+  //loop through all the child processes and find the one that matches the tid
+  struct list_elem *e;
+  struct thread *cur = thread_current();
+  struct child_process *cp;
+  struct thread *parent = cur->parent;
+  //find parent
+
+  for (e = list_begin(&parent->child_list); e != list_end(&parent->child_list); e = list_next(e)){
+    cp = list_entry(e, struct child_process, elem);
+    if (cp->tid == cur->tid){
+      break;
+    }
+  }
+  
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
+  if (!success)
+  {
+    sema_up(&cp->sema); 
     thread_exit ();
+  }
+  else{
+    sema_up(&cp->sema);
+  }
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -93,8 +128,33 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  while(true);
-  return -1;
+
+  // struct list_elem *e;
+  struct thread *cur = thread_current();
+
+  //find child from list
+  struct list_elem *e;
+  struct child_process *cp;
+  for (e = list_begin(&cur->child_list); e != list_end(&cur->child_list); e = list_next(e)){
+    cp = list_entry(e, struct child_process, elem);
+    if (cp->tid == child_tid){
+      break;
+    }
+  }
+
+  if (e == list_end(&cur->child_list)){
+    return -1;
+  }
+
+  //wait on semaphore
+  while (!cp->status){
+    sema_down(&cp->sema);
+  }
+
+  list_remove(&cp->elem);
+  
+  return cp->status;
+  
 }
 
 /* Free the current process's resources. */
@@ -103,7 +163,18 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-
+  //find child from list
+  struct list_elem *e;
+  struct child_process *cp;
+  struct thread *parent = cur->parent;
+  for (e = list_begin(&parent->child_list); e != list_end(&parent->child_list); e = list_next(e)){
+    cp = list_entry(e, struct child_process, elem);
+    if (cp->tid == cur->tid){
+      sema_up(&cp->sema);
+      break;
+    }
+  }
+  
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -119,7 +190,10 @@ process_exit (void)
       cur->pagedir = NULL;
       pagedir_activate (NULL);
       pagedir_destroy (pd);
+
+      
     }
+    
 }
 
 /* Sets up the CPU for running user code in the current
@@ -201,7 +275,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp);
+static bool setup_stack (void **esp, char **args, int argc);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -220,6 +294,16 @@ load (const char *file_name, void (**eip) (void), void **esp)
   off_t file_ofs;
   bool success = false;
   int i;
+
+  int argc = 0;
+  char *args[128];
+  printf("file_name = %s\n", file_name);
+  // Use a while loop to parse the arguments
+  char *token, *save_ptr;
+  for (token = strtok_r(file_name, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr)){
+    args[argc] = token;
+    argc++;
+  }
 
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
@@ -310,7 +394,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     }
 
   /* Set up stack. */
-  if (!setup_stack (esp))
+  if (!setup_stack (esp , args, argc))
     goto done;
 
   /* Start address. */
@@ -435,58 +519,49 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp) 
+setup_stack (void **esp, char **args, int argc) 
 {
   struct thread *t = thread_current ();
   uint8_t *kpage;
   bool success = false;
+
+  //print out the arguments
+  int i;
+  for (i = 0; i < argc; i++){
+    printf("args[%d] = %s\n", i, args[i]);
+  }
+
+  
+
 
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success){
-        struct kernel_thread_frame *kf = (struct kernel_thread_frame *)((uint8_t*)t + PGSIZE - 12);
-        // count number of chars and args in cmd line
-        int curr_offset = 0;
-        int num_args = 0;
-        while(*(uint8_t*)(kf->aux+curr_offset) != 204){
-          if(*(char*)(kf->aux+curr_offset) == '\0'){
-            num_args++;
-          }
-          curr_offset++;
+        *esp = PHYS_BASE;
+        int i;
+        for (i = argc - 1; i >= 0; i--){
+          *esp -= strlen(args[i]) + 1;
+          memcpy(*esp, args[i], strlen(args[i]) + 1);
         }
-        // bottom location offset of stack
-        int stack_offset = (curr_offset+1);
-        // word align offset
-        while(stack_offset % 4 != 0){
-          stack_offset++;
-        }
-        // store beginning of args
-        void* start_addr = PHYS_BASE - stack_offset;
-        // adjust stack offset for other values and assign stack pointer
-        stack_offset += (num_args + 4) * 4;
-        *esp = PHYS_BASE - stack_offset;
-
-        // iterate through cmd line again
-        curr_offset = 0;
-        int curr_start_offset = 0;
-        while(*(uint8_t*)(kf->aux+curr_offset) != 204){
-          // if end of arg found
-          if(*(char*)(kf->aux+curr_offset) == '\0'){
-            // copy arg to stack
-            memcpy(start_addr + curr_start_offset,(kf->aux + curr_start_offset), curr_offset - curr_start_offset);
-            // add location of arg to stack
-            strlcpy(*esp, (void*)kf->aux + curr_start_offset, 4);
-            // reassign curr_start address
-            curr_start_offset = curr_offset + 1;
-          }
-          curr_offset++;
-        }
-
-
-        hex_dump((uintptr_t)*esp, (void *)*esp, (uint32_t)PHYS_BASE - (uint32_t) *esp, true);
+        *esp -= 4;
+        *(char **)*esp = 0;
         
+        *esp -= 4;
+        *(int *)*esp = 0;
+        for (i = argc - 1; i >= 0; i--){
+          *esp -= 4;
+          *(char **)*esp = *esp + 4;
+        }
+        *esp -= 4;
+        *(char **)*esp = *esp + 4;
+        *esp -= 4;
+        *(int *)*esp = argc;
+        *esp -= 4;
+        *(int *)*esp = 0;
+        hex_dump((uintptr_t)*esp, (void *)*esp, (uint32_t)PHYS_BASE - (uint32_t) *esp, true);
+
       }
       else
         palloc_free_page (kpage);
@@ -513,3 +588,4 @@ install_page (void *upage, void *kpage, bool writable)
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
 }
+

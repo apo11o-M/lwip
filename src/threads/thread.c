@@ -237,6 +237,14 @@ thread_create (const char *name, int nice, thread_func *function, void *aux)
   /* Must save tid here - 't' could already be freed when we return 
      from wake_up_new_thread */ 
   tid_t tid = t->tid;
+
+  struct child_process *cp = malloc (sizeof (struct child_process));
+  sema_init (&cp->sema, 0);
+  cp->tid = tid;
+  cp->status = -1;
+  list_push_back (&thread_current ()->child_list, &cp->elem);
+
+
   /* Add to ready queue. */
   wake_up_new_thread (t);
   return tid;
@@ -562,6 +570,8 @@ init_thread (struct thread *t, const char *name, int nice)
   t->stack = (uint8_t *) t + PGSIZE;
   t->nice = nice;
   t->magic = THREAD_MAGIC;
+  list_init (&t->child_list);
+  t->parent = running_thread ();
   if (cpu_can_acquire_spinlock)
     spinlock_acquire (&all_lock);
   list_push_back (&all_list, &t->allelem);
