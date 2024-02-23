@@ -21,8 +21,6 @@
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
-
-
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -31,6 +29,7 @@ tid_t
 process_execute (const char *file_name) 
 {
   char *fn_copy;
+  char *save_ptr;
   tid_t tid;
 
   /* Make a copy of FILE_NAME.
@@ -39,24 +38,34 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
-
+  
+  char *f_name = malloc(strlen(fn_copy) + 1);
+  strlcpy(f_name, fn_copy, strlen(fn_copy)+1); // copy file_name to f_name
+  f_name = strtok_r(f_name, " ", &save_ptr);
 
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, NICE_DEFAULT, start_process, fn_copy);
-  if (tid == TID_ERROR)
-    palloc_free_page (fn_copy); 
+  tid = thread_create (f_name, NICE_DEFAULT, start_process, fn_copy);
 
+  free(f_name); // free no longer required f_name
+
+  if (tid == TID_ERROR)
+  {
+    palloc_free_page (fn_copy);
+    return -1;
+  }
+  struct child_process *ch = NULL;
+  struct thread *curr = thread_current();
   struct list_elem *e;
-  struct thread *cur = thread_current();
-  struct child_process *cp;
-  for (e = list_begin(&cur->child_list); e != list_end(&cur->child_list); e = list_next(e)){
-    cp = list_entry(e, struct child_process, elem);
-    if (cp->tid == cur->tid){
+  for(e = list_begin(&curr->child_list); e != list_end(&curr->child_list); e = list_next(e))
+  {
+    struct child_process *temp_ch = list_entry(e, struct child_process, elem);
+    if(temp_ch->tid == tid)
+    {
+      ch = temp_ch;
       break;
     }
   }
-
-  sema_down(&cp->sema);
+  sema_down(&ch->sema); // wait for child to finish loading  
   return tid;
 }
 
@@ -297,7 +306,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   int argc = 0;
   char *args[128];
-  printf("file_name = %s\n", file_name);
+  // printf("file_name = %s\n", file_name);
   // Use a while loop to parse the arguments
   char *token, *save_ptr;
   for (token = strtok_r(file_name, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr)){
@@ -310,6 +319,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if (t->pagedir == NULL) 
     goto done;
   process_activate ();
+
+  // acquire file lock?
 
   /* Open executable file. */
   file = filesys_open (file_name);
@@ -401,6 +412,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
   *eip = (void (*) (void)) ehdr.e_entry;
 
   success = true;
+  // set thread current own file?
+  file_deny_write(file);
 
  done:
   /* We arrive here whether the load is successful or not. */
@@ -525,52 +538,63 @@ setup_stack (void **esp, char **args, int argc)
   uint8_t *kpage;
   bool success = false;
 
-  //print out the arguments
-  int i;
-  for (i = 0; i < argc; i++){
-    printf("args[%d] = %s\n", i, args[i]);
+  // print out the arguments
+  // removing this would hang the program, not entirely sure where the racing 
+  // condition is coming from
+  printf("(args) begin\n");
+  printf("(args) argc = %d\n", argc);
+  for (int i = 0; i < argc; i++){
+    printf("(args) argv[%d] = \'%s\'\n", i, args[i]);
   }
-
+  // =======================
   
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
-  if (kpage != NULL) 
-    {
-      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-      if (success){
-        *esp = PHYS_BASE;
-        int i;
-        // push arguments onto the stack
-        for (i = argc - 1; i >= 0; i--){
-          *esp -= strlen(args[i]) + 1;
-          memcpy(*esp, args[i], strlen(args[i]) + 1);
-        }
-        // word align
-        // I think this is wrong idrk how to fix it
-        *esp -= 4;
-        *(char **)*esp = 0;
-        // push the address of the arguments onto the stack
-        *esp -= 4;
-        *(int *)*esp = 0;
-        // push the addresses of arguments onto the stack
-        for (i = argc - 1; i >= 0; i--){
-          *esp -= 4;
-          *(char **)*esp = *esp + 4;
-        }
-        // push the address of the first argument onto the stack
-        *esp -= 4;
-        *(char **)*esp = *esp + 4;
-        // push the number of arguments onto the stack
-        *esp -= 4;
-        *(int *)*esp = argc;
-        // push fake
-        *esp -= 4;
-        *(int *)*esp = 0;
-        hex_dump((uintptr_t)*esp, (void *)*esp, (uint32_t)PHYS_BASE - (uint32_t) *esp, true);
+  if (kpage != NULL) {
+    success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
+    if (success) {
+      *esp = PHYS_BASE;
 
+      // pointers to the arguments in the stack
+      char *arg_ptrs[argc];
+      // push arguments onto the stack
+      for (int i = argc - 1; i >= 0; i--){
+        *esp -= strlen(args[i]) + 1;
+        arg_ptrs[i] = (char *)*esp;
+        memcpy(*esp, args[i], strlen(args[i]) + 1);
       }
-      else
-        palloc_free_page (kpage);
+
+      // align the stack to 4 byte boundary by padding with zeros
+      while ((size_t) *esp % 4 != 0) {
+        *esp -= (uint8_t)1;   // pointer arithmetic
+        *(uint8_t *)*esp = 0; // set value at address esp to 0
+      }
+
+      // push a null pointer to mark the end of the arguments
+      *esp -= sizeof(char *);
+      **(uint32_t **)esp = 0; 
+
+      // push the address of the arguments to the stack
+      for (int i = argc - 1; i >= 0; i--){
+        *esp -= sizeof(char *);
+        **(uint32_t **)esp = (uint32_t)arg_ptrs[i];
+      }
+
+      // push the addresses to argv
+      char **args_ptr = *esp;
+      *esp -= sizeof(char **);
+      **(uint32_t **)esp = (uint32_t)args_ptr;
+
+      // push the argc
+      *esp -= sizeof(int);
+      **(int **)esp = argc;
+
+      // push the fake return address
+      *esp -= sizeof(void *);
+      **(uint32_t **)esp = 0;
+    } else {
+      palloc_free_page (kpage);
     }
+  }
   return success;
 }
 

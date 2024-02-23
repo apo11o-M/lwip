@@ -1,0 +1,4 @@
+*.dsk
+DESIGNDOC
+*.a
+build
