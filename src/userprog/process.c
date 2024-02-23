@@ -532,8 +532,6 @@ setup_stack (void **esp, char **args, int argc)
   }
 
   
-
-
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
     {
@@ -541,23 +539,30 @@ setup_stack (void **esp, char **args, int argc)
       if (success){
         *esp = PHYS_BASE;
         int i;
+        // push arguments onto the stack
         for (i = argc - 1; i >= 0; i--){
           *esp -= strlen(args[i]) + 1;
           memcpy(*esp, args[i], strlen(args[i]) + 1);
         }
+        // word align
+        // I think this is wrong idrk how to fix it
         *esp -= 4;
         *(char **)*esp = 0;
-        
+        // push the address of the arguments onto the stack
         *esp -= 4;
         *(int *)*esp = 0;
+        // push the addresses of arguments onto the stack
         for (i = argc - 1; i >= 0; i--){
           *esp -= 4;
           *(char **)*esp = *esp + 4;
         }
+        // push the address of the first argument onto the stack
         *esp -= 4;
         *(char **)*esp = *esp + 4;
+        // push the number of arguments onto the stack
         *esp -= 4;
         *(int *)*esp = argc;
+        // push fake
         *esp -= 4;
         *(int *)*esp = 0;
         hex_dump((uintptr_t)*esp, (void *)*esp, (uint32_t)PHYS_BASE - (uint32_t) *esp, true);
