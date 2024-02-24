@@ -225,11 +225,11 @@ static int open (const char *file)
   struct file *file_p = filesys_open(file);
   if(file_p){
     struct thread *t = thread_current();
-    for(int i = t->open_files; i < FD_MAX; i++){
+    for(int i = t->open_files + 2; i < FD_MAX; i++){
       if(t->file_descriptors[i] == NULL){
         t->file_descriptors[i] = file_p;
         t->open_files++;
-        return i + 2; // the thread stores file descriptors 2-129, because 1 and 2 are always taken
+        return i;
       }
     }
   }
@@ -310,15 +310,14 @@ Exiting or terminating a process implicitly closes all its open file descriptors
 static void close (int fd)
 {
   // close the file
-  if(fd > 1 && fd < 130){
+  if(fd > 1 && fd < 128){
 
     struct thread *t = thread_current();
-    // the thread stores file descriptors 2-129, because 1 and 2 are always taken
-    struct file *file_p = t->file_descriptors[fd - 2];
+    struct file *file_p = t->file_descriptors[fd];
 
     ASSERT(t->open_files > 0);
     t->open_files--;
-    t->file_descriptors[fd - 2] == NULL;
+    t->file_descriptors[fd] == NULL;
     file_close(file_p);
   }
 }
