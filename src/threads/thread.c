@@ -51,6 +51,8 @@ static tid_t allocate_tid (void);
 static struct thread *do_thread_create (const char *, int, thread_func *, void *);
 static void init_boot_thread (struct thread *boot_thread, struct cpu *cpu);
 static void init_thread (struct thread *t, const char *name, int nice);
+static void lock_own_ready_queue (void);
+static void unlock_own_ready_queue (void);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -353,7 +355,7 @@ thread_tid (void)
  * preempted and possibly migrated to another CPU once load balancing is 
  * implemented.
  */
-void
+static void
 lock_own_ready_queue (void)
 {
   intr_disable_push ();
@@ -361,7 +363,7 @@ lock_own_ready_queue (void)
   intr_enable_pop ();
 }
 
-void
+static void
 unlock_own_ready_queue (void)
 {
   spinlock_release (&get_cpu ()->rq.lock);
@@ -410,7 +412,6 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   lock_own_ready_queue ();
-
 
   cur->status = THREAD_READY;
   if (cur != get_cpu ()->rq.idle_thread)
@@ -476,8 +477,6 @@ idle (void *idle_started_ UNUSED)
        *
        * The baseline implementation does not ensure this.
        */
-      sched_load_balance();
-
       thread_block (NULL);
 
       /* Re-enable interrupts and wait for the next one.
@@ -554,9 +553,6 @@ init_boot_thread (struct thread *boot_thread, struct cpu *cpu)
   boot_thread->tid = allocate_tid ();
   boot_thread->cpu = cpu;
   cpu->rq.curr = boot_thread;
-  /* Init sleeping thread list */
-  // list_init (&cpu->sleeping_threads);
-  // spinlock_init (&cpu->cpu_spinlock);
 }
 
 /* Does basic initialization of T as a blocked thread named

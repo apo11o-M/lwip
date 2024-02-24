@@ -5,9 +5,8 @@
 #include "threads/thread.h"
 #include "devices/shutdown.h"
 
-#include "threads/pte.h" // test
-#include "pagedir.h" //test
-
+#include "threads/pte.h"
+#include "pagedir.h"
 
 static void syscall_handler (struct intr_frame *);
 static void halt();
@@ -58,34 +57,34 @@ syscall_handler (struct intr_frame *f)
       exit(*(int *)(f->esp + 4));
       break;
     case SYS_EXEC:
-      exec(*(char **)(f->esp + 4));
+      f->eax = exec(*(char **)(f->esp + 4));
       break;
     case SYS_WAIT:
-      wait(*(int *)(f->esp + 4));
+      f->eax = wait(*(int *)(f->esp + 4));
       break;
     case SYS_CREATE:
-      create(*(char **)(f->esp + 4), *(unsigned *)(f->esp + 8));
+      f->eax = create(*(char **)(f->esp + 4), *(unsigned *)(f->esp + 8));
       break;
     case SYS_REMOVE:
-      remove(*(char **)(f->esp + 4));
+      f->eax = remove(*(char **)(f->esp + 4));
       break;
     case SYS_OPEN:
-      open(*(char **)(f->esp + 4));
+      f->eax = open(*(char **)(f->esp + 4));
       break;
     case SYS_FILESIZE:
-      filesize(*(int *)(f->esp + 4));
+      f->eax = filesize(*(int *)(f->esp + 4));
       break;
     case SYS_READ:
-      read(*(int *)(f->esp + 4), *(void **)(f->esp + 8), *(unsigned *)(f->esp + 12));
+      f->eax = read(*(int *)(f->esp + 4), *(void **)(f->esp + 8), *(unsigned *)(f->esp + 12));
       break;
     case SYS_WRITE:
-      write(*(int *)(f->esp + 4), *(void **)(f->esp + 8), *(unsigned *)(f->esp + 12));
+      f->eax = write(*(int *)(f->esp + 4), *(void **)(f->esp + 8), *(unsigned *)(f->esp + 12));
       break;
     case SYS_SEEK:
       seek(*(int *)(f->esp + 4), *(unsigned *)(f->esp + 8));
       break;
     case SYS_TELL:
-      tell(*(int *)(f->esp + 4));
+      f->eax = tell(*(int *)(f->esp + 4));
       break;
     case SYS_CLOSE:
       close(*(int *)(f->esp + 4));
@@ -174,6 +173,13 @@ Creating a new file does not open it: opening the new file is a separate operati
 static bool create (const char *file, unsigned initial_size){
 
   // create the file
+  
+
+  /* Check provided stack pointer for validity */
+  if(!file || !is_user_vaddr(file) || !pagedir_get_page (thread_current()->pagedir, file)){ 
+    exit(-1);
+  }
+  
   return filesys_create(file, initial_size);
 
 }

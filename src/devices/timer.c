@@ -27,19 +27,12 @@ static int64_t ticks;
 static unsigned loops_per_tick;
 /* The current time wall clock time in nanoseconds */
 static uint64_t cur_time = 0;
-static struct spinlock timer_lock;
-static struct list sleeping_threads;
+
 static intr_handler_func timer_interrupt;
 static bool too_many_loops (unsigned loops);
 static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
-
-static void wake_check(void);
-
-static void add_sleeping_thread(struct thread *t);
-
-
 
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
@@ -47,8 +40,6 @@ void
 timer_init (void) 
 {
   intr_register_ext (0x20 + IRQ_TIMER, timer_interrupt, "8254 Timer");
-  spinlock_init(&timer_lock);
-  list_init(&sleeping_threads);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -101,36 +92,9 @@ timer_sleep (int64_t ticks)
 {
   ASSERT (intr_get_level () == INTR_ON);
   
-  struct thread *t = thread_current();
-  ASSERT (t->status == THREAD_RUNNING);
-  t->when_to_wake = ticks + timer_ticks();
-
-
-  /* Acquire the cpu's spin lock to add waiting thread */  
-  spinlock_acquire(&timer_lock);
-  add_sleeping_thread(t);
-  thread_block(&timer_lock);
-  
-  spinlock_release(&timer_lock);
-
-}
-
-
-void add_sleeping_thread(struct thread *t) {  
-  /* Add the thread by placing it in order of when it should be completed */
-  struct list_elem *e;
-  for (e = list_begin (&sleeping_threads); e != list_end (&sleeping_threads);
-       e = list_next (e))
-    {
-      struct thread *t2 = list_entry (e, struct thread, elem);
-      if (t->when_to_wake < t2->when_to_wake){
-        list_insert(e, &t->elem);
-        return;
-      }
-    }
-
-    /* If there are no threads with a longer sleep time, add this thread to the back */
-    list_push_back(&sleeping_threads, &t->elem);
+  int64_t start = timer_ticks ();
+  while (timer_elapsed (start) < ticks) 
+    thread_yield ();
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -208,43 +172,13 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   /* CPU 0 is in charge of maintaining wall-clock time */
-  struct cpu *c = get_cpu();
-  if (c->id == 0) 
+  if (get_cpu ()->id == 0) 
     {
       ticks++;
       timer_settime (timer_ticks () * NSEC_PER_SEC / TIMER_FREQ);
     }
     
-  
-  spinlock_acquire(&timer_lock);
-  wake_check();
-  spinlock_release(&timer_lock);
-  
-  thread_tick();
-
-  // spinlock_release(&c->cpu_spinlock);
-
-  // intr_disable();
-}
-
-/* wake any sleeping threads that have finished sleeping */
-static void wake_check(void){
-  
-  /* Start iterating through the sleeping threads, if there are any */
-  while (!list_empty(&sleeping_threads)){
-    struct list_elem *e = list_front(&sleeping_threads);
-    struct thread *thread = list_entry (e, struct thread, elem);
-
-    /* Since the list is sorted by wake time, either wake the current thread or return */
-    if (thread->when_to_wake <= timer_ticks()){
-      list_remove(e);
-      thread_unblock(thread);
-    }
-    else{
-      return;
-
-    }
-  }
+  thread_tick ();
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
@@ -295,11 +229,10 @@ real_time_sleep (int64_t num, int32_t denom)
   ASSERT (intr_get_level () == INTR_ON);
   if (ticks > 0)
     {
-      // Sleep for the appropriate number of whole ticks
+      /* We're waiting for at least one full timer tick.  Use
+         timer_sleep() because it will yield the CPU to other
+         processes. */                
       timer_sleep (ticks); 
-
-      // Delay for the remaining time
-      real_time_delay(num % denom, denom);
     }
   else 
     {
