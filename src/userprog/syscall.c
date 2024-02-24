@@ -24,6 +24,7 @@ static int write (int fd, const void *buffer, unsigned size);
 static void seek (int fd, unsigned position);
 static unsigned tell (int fd);
 static void close (int fd);
+static struct file * file_get(int fd);
 
 
 void
@@ -310,15 +311,21 @@ Exiting or terminating a process implicitly closes all its open file descriptors
 static void close (int fd)
 {
   // close the file
+  struct file * file_p = file_get(fd);
+  struct thread *t = thread_current();
+  ASSERT(t->open_files > 0);
+  t->open_files--;
+  t->file_descriptors[fd] == NULL;
+  file_close(file_p);
+}
+
+static struct file * file_get(int fd){
   if(fd > 1 && fd < 128){
-
-    struct thread *t = thread_current();
-    struct file *file_p = t->file_descriptors[fd];
-
-    ASSERT(t->open_files > 0);
-    t->open_files--;
-    t->file_descriptors[fd] == NULL;
-    file_close(file_p);
+    return thread_current()->file_descriptors[fd];
   }
+  else{
+    return NULL;
+  }
+
 }
 
