@@ -1,9 +1,11 @@
 #include "userprog/syscall.h"
+#include "userprog/process.h"
 #include <stdio.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "devices/shutdown.h"
+#include "filesys/filesys.h"
 
 #include "threads/pte.h"
 #include "pagedir.h"
