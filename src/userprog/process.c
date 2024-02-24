@@ -166,6 +166,8 @@ void
 process_exit ()
 {
   struct thread *cur = thread_current ();
+  // extract kernel thread frame
+    struct kernel_thread_frame *kf = (struct kernel_thread_frame *)((uint8_t*)cur + PGSIZE - 12);
   uint32_t *pd;
   //find child from list
   struct list_elem *e;
