@@ -177,11 +177,11 @@ static bool create (const char *file, unsigned initial_size){
   // create the file
   
 
-  /* Check provided stack pointer for validity */
+  /* Check provided pointer for validity */
   if(!file || !is_user_vaddr(file) || !pagedir_get_page (thread_current()->pagedir, file)){ 
     exit(-1);
   }
-  
+
   return filesys_create(file, initial_size);
 
 }
@@ -214,7 +214,26 @@ Different file descriptors for a single file are closed independently in separat
 */
 static int open (const char *file)
 {
-  return filesys_open(file);
+  if(!file || !is_user_vaddr(file) || !pagedir_get_page (thread_current()->pagedir, file)){ 
+    exit(-1);
+  }
+
+  if (strlen(file) == 0){
+    return -1;
+  }
+
+  struct file *file_p = filesys_open(file);
+  if(file_p){
+    struct thread *t = thread_current();
+    for(int i = t->open_files; i < FD_MAX; i++){
+      if(t->file_descriptors[i] == NULL){
+        t->file_descriptors[i] = file_p;
+        t->open_files++;
+        return i + 2; // the thread stores file descriptors 2-129, because 1 and 2 are always taken
+      }
+    }
+  }
+  return -1;
 
 }
 
@@ -291,6 +310,16 @@ Exiting or terminating a process implicitly closes all its open file descriptors
 static void close (int fd)
 {
   // close the file
-  file_close(fd);
+  if(fd > 1 && fd < 130){
+
+    struct thread *t = thread_current();
+    // the thread stores file descriptors 2-129, because 1 and 2 are always taken
+    struct file *file_p = t->file_descriptors[fd - 2];
+
+    ASSERT(t->open_files > 0);
+    t->open_files--;
+    t->file_descriptors[fd - 2] == NULL;
+    file_close(file_p);
+  }
 }
 
