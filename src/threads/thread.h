@@ -120,6 +120,7 @@ struct thread
 struct child_process {
   tid_t tid;
   int status;
+  struct file* program_file;
   struct semaphore sema;
   struct list_elem elem;
 };

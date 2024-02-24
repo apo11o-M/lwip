@@ -18,7 +18,7 @@
 #include "threads/vaddr.h"
 #include <stdlib.h>
 static thread_func start_process NO_RETURN;
-static bool load (const char *cmdline, void (**eip) (void), void **esp);
+static bool load (const char *cmdline, void (**eip) (void), void **esp, struct file** file_ptr);
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -78,14 +78,13 @@ start_process (void *file_name_)
 
   // terminate file name before args
   char *file_name = file_name_;
-  char**file_name_ptr = &file_name;
-
+  struct file* file_ptr = NULL;
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
+  success = load (file_name, &if_.eip, &if_.esp, &file_ptr);
 
 
   // signal parent that load is done
@@ -102,6 +101,9 @@ start_process (void *file_name_)
       break;
     }
   }
+  // assign program file pointer for later closing
+  cp->program_file = file_ptr;
+  
   
   /* If load failed, quit. */
   palloc_free_page (file_name);
@@ -167,7 +169,6 @@ process_exit ()
 {
   struct thread *cur = thread_current ();
   // extract kernel thread frame
-    struct kernel_thread_frame *kf = (struct kernel_thread_frame *)((uint8_t*)cur + PGSIZE - 12);
   uint32_t *pd;
   //find child from list
   struct list_elem *e;
@@ -180,8 +181,8 @@ process_exit ()
       break;
     }
   }
-  
   sema_up(&cp->sema);
+  // close file
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -291,7 +292,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool
-load (const char *file_name, void (**eip) (void), void **esp) 
+load (const char *file_name, void (**eip) (void), void **esp, struct file** file_ptr)
 {
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
@@ -320,6 +321,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   /* Open executable file. */
   file = filesys_open (file_name);
+  // save file pointer to close later;
+  *file_ptr = file;
   // TEMP: Hardcode file name
   // file = filesys_open ("echo");
   if (file == NULL) 
@@ -530,7 +533,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack (void **esp, char **args, int argc) 
 {
-  struct thread *t = thread_current ();
   uint8_t *kpage;
   bool success = false;
 
