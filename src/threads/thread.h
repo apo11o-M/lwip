@@ -104,7 +104,10 @@ struct thread
   /* Shared between thread.c and synch.c. */
   struct list_elem elem; /* List element. */
 
-   int64_t when_to_wake; /* When the thread should wake up if put to sleep */ 
+  struct list child_list; /* List of files opened by the process. */
+  int exit_status; /* Exit status of the process. */
+  void * parent; /* Parent thread id. */
+
 
 #ifdef USERPROG
   /* Owned by userprog/process.c. */
@@ -112,6 +115,13 @@ struct thread
 #endif
   /* Owned by thread.c. */
   unsigned magic; /* Detects stack overflow. */
+};
+
+struct child_process {
+  tid_t tid;
+  int status;
+  struct semaphore sema;
+  struct list_elem elem;
 };
 
 void thread_init (void);
@@ -139,20 +149,13 @@ void thread_foreach (thread_action_func *, void *);
 int thread_get_nice (void);
 void thread_set_nice (int);
 
-// make it non-static so that it can be used in scheduler.c for load balancing
-void lock_own_ready_queue (void);
-void unlock_own_ready_queue (void);
 
-static const uint32_t prio_to_weight[40] =
-  {
-    /* -20 */    88761, 71755, 56483, 46273, 36291,
-    /* -15 */    29154, 23254, 18705, 14949, 11916,
-    /* -10 */    9548, 7620, 6100, 4904, 3906,
-    /*  -5 */    3121, 2501, 1991, 1586, 1277,
-    /*   0 */    1024, 820, 655, 526, 423,
-    /*   5 */    335, 272, 215, 172, 137,
-    /*  10 */    110, 87, 70, 56, 45,
-    /*  15 */    36, 29, 23, 18, 15,
-  };
+/* Stack frame for kernel_thread(). */
+struct kernel_thread_frame
+{
+  void *eip; /* Return address. */
+  thread_func *function; /* Function to call. */
+  void *aux; /* Auxiliary data for function. */
+};
 
 #endif /* threads/thread.h */

@@ -1,2 +1,5 @@
-/.vscode
+*.dsk
 DESIGNDOC
+*.a
+*.o
+build
