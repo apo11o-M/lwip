@@ -242,10 +242,11 @@ Returns the size, in bytes, of the file open as fd.
 */
 static int filesize (int fd)
 {
-
+  // convert fd to file ptr
+  struct thread *t = thread_current();
+  struct file *file_p = t->file_descriptors[fd - 2];
   // get the file size
-  return file_length(fd);
-
+  return file_length(file_p);
 }
 /*
 Reads size bytes from the file open as fd into buffer. 
@@ -255,9 +256,10 @@ Fd 0 reads from the keyboard using input_getc().
 */
 static int read (int fd, void *buffer, unsigned size)
 {
-  
+    struct thread *t = thread_current();
+    struct file *file_p = t->file_descriptors[fd - 2];
     // read from the file
-    return file_read(fd, buffer, size);
+    return file_read(file_p, buffer, size);
 }
 /*
 Writes size bytes from buffer to the open file fd. 
