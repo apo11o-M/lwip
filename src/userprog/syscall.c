@@ -242,7 +242,7 @@ confusing both human readers and our grading scripts.
 static int write (int fd, const void *buffer, unsigned size)
 {
   // write to the file
-  putbuf(buffer, size + 1);
+  putbuf(buffer, size);
   return size;
   // return file_write(fd, buffer, size);
 

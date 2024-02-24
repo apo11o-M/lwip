@@ -1,4 +1,5 @@
 *.dsk
 DESIGNDOC
 *.a
+*.o
 build

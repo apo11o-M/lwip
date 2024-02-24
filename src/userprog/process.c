@@ -137,7 +137,6 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-
   // struct list_elem *e;
   struct thread *cur = thread_current();
 
@@ -155,20 +154,17 @@ process_wait (tid_t child_tid UNUSED)
     return -1;
   }
 
-  //wait on semaphore
-  while (!cp->status){
+  // wait on semaphore
+  if (cp->status) {
     sema_down(&cp->sema);
   }
-
   list_remove(&cp->elem);
-  
-  return cp->status;
-  
+  return cp->status;  
 }
 
 /* Free the current process's resources. */
 void
-process_exit (void)
+process_exit ()
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
@@ -177,13 +173,15 @@ process_exit (void)
   struct child_process *cp;
   struct thread *parent = cur->parent;
   for (e = list_begin(&parent->child_list); e != list_end(&parent->child_list); e = list_next(e)){
-    cp = list_entry(e, struct child_process, elem);
-    if (cp->tid == cur->tid){
-      sema_up(&cp->sema);
+    struct child_process *temp = list_entry(e, struct child_process, elem);
+    if (temp->tid == cur->tid){
+      cp = temp;
       break;
     }
   }
   
+  sema_up(&cp->sema);
+
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -199,10 +197,7 @@ process_exit (void)
       cur->pagedir = NULL;
       pagedir_activate (NULL);
       pagedir_destroy (pd);
-
-      
     }
-    
 }
 
 /* Sets up the CPU for running user code in the current
@@ -220,7 +215,7 @@ process_activate (void)
      interrupts. */
   tss_update ();
 }
-
+
 /* We load ELF binaries.  The following definitions are taken
    from the ELF specification, [ELF1], more-or-less verbatim.  */
 
@@ -420,7 +415,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   file_close (file);
   return success;
 }
-
+
 /* load() helpers. */
 
 static bool install_page (void *upage, void *kpage, bool writable);
@@ -539,13 +534,15 @@ setup_stack (void **esp, char **args, int argc)
   bool success = false;
 
   // print out the arguments
-  // removing this would hang the program, not entirely sure where the racing 
-  // condition is coming from
-  printf("(args) begin\n");
-  printf("(args) argc = %d\n", argc);
-  for (int i = 0; i < argc; i++){
-    printf("(args) argv[%d] = \'%s\'\n", i, args[i]);
-  }
+  // printf("(args) begin\n");
+  // printf("(args) argc = %d\n", argc);
+  // for (int i = 0; i < argc; i++){
+  //   printf("(args) argv[%d] = \'%s\'\n", i, args[i]);
+  // }
+  // if (argc == 1){
+  //   printf("(args) argv[1] = null\n");
+  // }
+  // printf("(args) end\n");
   // =======================
   
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
@@ -557,7 +554,7 @@ setup_stack (void **esp, char **args, int argc)
       // pointers to the arguments in the stack
       char *arg_ptrs[argc];
       // push arguments onto the stack
-      for (int i = argc - 1; i >= 0; i--){
+      for (int i = argc - 1; i >= 0; i--) {
         *esp -= strlen(args[i]) + 1;
         arg_ptrs[i] = (char *)*esp;
         memcpy(*esp, args[i], strlen(args[i]) + 1);
@@ -617,4 +614,3 @@ install_page (void *upage, void *kpage, bool writable)
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
 }
-
