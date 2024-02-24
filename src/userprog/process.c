@@ -183,6 +183,8 @@ process_exit ()
   }
   sema_up(&cp->sema);
   // close file
+  /* We arrive here whether the load is successful or not. */
+  file_close (cp->program_file);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -415,8 +417,7 @@ load (const char *file_name, void (**eip) (void), void **esp, struct file** file
   file_deny_write(file);
 
  done:
-  /* We arrive here whether the load is successful or not. */
-  file_close (file);
+
   return success;
 }
 
