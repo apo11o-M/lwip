@@ -181,6 +181,7 @@ process_exit ()
       break;
     }
   }
+  
   sema_up(&cp->sema);
   // close file
   /* We arrive here whether the load is successful or not. */
