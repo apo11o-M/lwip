@@ -25,7 +25,7 @@ typedef int tid_t;
 #define NICE_MIN -20                    /* Highest priority. */
 #define NICE_DEFAULT 0                  /* Default priority. */
 #define NICE_MAX 19                     /* Lowest priority. */
-
+#define FD_MAX 128                      /* Maximum number of file descriptors */
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -107,6 +107,9 @@ struct thread
   struct list child_list; /* List of files opened by the process. */
   int exit_status; /* Exit status of the process. */
   void * parent; /* Parent thread id. */
+
+  int open_files;
+  struct file *file_descriptors[FD_MAX];
 
 
 #ifdef USERPROG

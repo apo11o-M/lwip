@@ -207,6 +207,8 @@ do_thread_create (const char *name, int nice, thread_func *function, void *aux)
     sf = alloc_frame (t, sizeof *sf);
     sf->eip = switch_entry;
     sf->ebp = 0;
+
+    t->open_files = 0;
     return t;
 }
 
