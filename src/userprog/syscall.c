@@ -5,6 +5,9 @@
 #include "threads/thread.h"
 #include "devices/shutdown.h"
 
+#include "threads/pte.h" // test
+#include "pagedir.h" //test
+
 
 static void syscall_handler (struct intr_frame *);
 static void halt();
@@ -30,9 +33,13 @@ syscall_init (void)
 }
 
 static void
-syscall_handler (struct intr_frame *f UNUSED) 
+syscall_handler (struct intr_frame *f) 
 {
-
+  /* Check provided stack pointer for validity */
+  if(!is_user_vaddr(f->esp) || !pagedir_get_page (thread_current()->pagedir, f->esp)){ 
+    exit(-1);
+  }
+ 
   int syscall_number = *(int *)f->esp;
   // argument offsets
   // arg1 = f->esp + 4
