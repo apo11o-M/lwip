@@ -175,11 +175,11 @@ static bool create (const char *file, unsigned initial_size){
   // create the file
   
 
-  /* Check provided stack pointer for validity */
+  /* Check provided pointer for validity */
   if(!file || !is_user_vaddr(file) || !pagedir_get_page (thread_current()->pagedir, file)){ 
     exit(-1);
   }
-  
+
   return filesys_create(file, initial_size);
 
 }
@@ -212,6 +212,14 @@ Different file descriptors for a single file are closed independently in separat
 */
 static int open (const char *file)
 {
+  if(!file || !is_user_vaddr(file) || !pagedir_get_page (thread_current()->pagedir, file)){ 
+    exit(-1);
+  }
+
+  if (strlen(file) == 0){
+    return -1;
+  }
+  printf("\nfile: %s\n", file);
   return filesys_open(file);
 
 }
