@@ -390,7 +390,7 @@ static void close (int fd)
     struct file * file_p = file_get(fd);
     // ASSERT(t->open_files > 0);
     t->open_files--;
-    t->file_descriptors[fd] == NULL;
+    t->file_descriptors[fd] = NULL;
     file_close(file_p);
   }
 }
