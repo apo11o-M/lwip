@@ -62,9 +62,7 @@ syscall_handler (struct intr_frame *f)
       break;
     case SYS_EXIT:
       check_argument(f->esp + 4);
-      printf("exit: %d\n", *(int *)(f->esp + 4));
       thread_current()->exit_status = *(int *)(f->esp + 4);
-      printf("exit: %d\n", thread_current()->exit_status);
       exit(*(int *)(f->esp + 4));
       break;
     case SYS_EXEC:
@@ -137,7 +135,6 @@ static void check_argument(void *arg1)
   // printf("%s", pagedir_get_page(thread_current()->pagedir, arg1));
 
   if(!is_user_vaddr(arg1) || arg1 == NULL || pagedir_get_page(thread_current()->pagedir,arg1 ) == NULL){ 
-    printf("check_argument: %p\n", arg1);
     exit(-1);
   }
 }
@@ -322,9 +319,15 @@ Fd 0 reads from the keyboard using input_getc().
 */
 static int read (int fd, void *buffer, unsigned size)
 {
+  if(fd == 1){
+    return -1;
+  }
+  else if (fd == 0){
+    //TODO
+  }
   
-    // read from the file
-    return file_read(file_get(fd), buffer, size);
+  // read from the file
+  return file_read(file_get(fd), buffer, size);
 }
 /*
 Writes size bytes from buffer to the open file fd. 
@@ -342,7 +345,10 @@ confusing both human readers and our grading scripts.
 */
 static int write (int fd, const void *buffer, unsigned size)
 {
-  if(fd == 1){
+  if(fd == 0){
+    return -1;
+  }
+  else if(fd == 1){
     putbuf(buffer, size);
     return size;
   }
@@ -382,11 +388,11 @@ Exiting or terminating a process implicitly closes all its open file descriptors
 */
 static void close (int fd)
 {
+  struct thread *t = thread_current();
   // close the file
-  if(fd >= 2 && fd <= 127){
+  if(fd >= 2 && fd <= 127 && t->file_descriptors[fd] != NULL){
     struct file * file_p = file_get(fd);
-    struct thread *t = thread_current();
-    ASSERT(t->open_files > 0);
+    // ASSERT(t->open_files > 0);
     t->open_files--;
     t->file_descriptors[fd] == NULL;
     file_close(file_p);
