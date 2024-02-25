@@ -132,7 +132,6 @@ syscall_handler (struct intr_frame *f)
 
 static void check_argument(void *arg1)
 {
-  // printf("%s", pagedir_get_page(thread_current()->pagedir, arg1));
 
   if(!is_user_vaddr(arg1) || arg1 == NULL || pagedir_get_page(thread_current()->pagedir,arg1 ) == NULL){ 
     exit(-1);
@@ -318,11 +317,11 @@ Fd 0 reads from the keyboard using input_getc().
 */
 static int read (int fd, void *buffer, unsigned size)
 {
+    check_argument(buffer);
     struct thread *t = thread_current();
     if(fd > FD_MAX || fd == 1 || fd < 0 ||  t->file_descriptors[fd] == NULL){
       return -1;
     }
-
     // read from the file
     return file_read(file_get(fd), buffer, size);
 }
