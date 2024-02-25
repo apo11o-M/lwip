@@ -181,6 +181,9 @@ process_exit ()
       break;
     }
   }
+
+  // set exit status
+  cp->status = cur->exit_status;
   
   sema_up(&cp->sema);
   // close file
