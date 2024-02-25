@@ -186,7 +186,6 @@ static int exec(const char *cmd_line)
   // printf("first_word: %s\n", first_word);
   struct file *file = filesys_open(first_word);
   if(file == NULL){
-    printf("exec: file not found\n");
     return -1;
   }
   file_close(file);
