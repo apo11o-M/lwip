@@ -9,6 +9,7 @@
 
 #include "threads/pte.h"
 #include "pagedir.h"
+#include <string.h>
 
 static void syscall_handler (struct intr_frame *);
 static void halt();
@@ -245,7 +246,7 @@ static int filesize (int fd)
 {
 
   // get the file size
-  return file_length(fd);
+  return file_length(file_get(fd));
 
 }
 /*
@@ -258,7 +259,7 @@ static int read (int fd, void *buffer, unsigned size)
 {
   
     // read from the file
-    return file_read(fd, buffer, size);
+    return file_read(file_get(fd), buffer, size);
 }
 /*
 Writes size bytes from buffer to the open file fd. 
@@ -276,11 +277,17 @@ confusing both human readers and our grading scripts.
 */
 static int write (int fd, const void *buffer, unsigned size)
 {
+  if(fd == 1){
+    putbuf(buffer, size);
+    return size;
+  }
   // write to the file
-  putbuf(buffer, size);
-  return size;
-  // return file_write(fd, buffer, size);
+  struct file *file_p = file_get(fd);
+  // return file_write(file_p, buffer, size);
 
+  if(file_p){
+    return file_write(file_p, buffer, size);
+  }
 }
 /*
 Changes the next byte to be read or written in open file fd to position, 
@@ -294,7 +301,7 @@ These semantics are implemented in the file system and do not require any specia
 static void seek (int fd, unsigned position)
 {
   // set the file position
-  file_seek(fd, position);
+  file_seek(file_get(fd), position);
 }
 /*
 Returns the position of the next byte to be read or written in open file fd, expressed in bytes from the beginning of the file.
@@ -302,7 +309,7 @@ Returns the position of the next byte to be read or written in open file fd, exp
 static unsigned tell (int fd){
 
   // get the file position
-  return file_tell(fd);
+  return file_tell(file_get(fd));
 }
 /*
 Closes file descriptor fd. 
@@ -311,16 +318,18 @@ Exiting or terminating a process implicitly closes all its open file descriptors
 static void close (int fd)
 {
   // close the file
-  struct file * file_p = file_get(fd);
-  struct thread *t = thread_current();
-  ASSERT(t->open_files > 0);
-  t->open_files--;
-  t->file_descriptors[fd] == NULL;
-  file_close(file_p);
+  if(fd > 1){
+    struct file * file_p = file_get(fd);
+    struct thread *t = thread_current();
+    ASSERT(t->open_files > 0);
+    t->open_files--;
+    t->file_descriptors[fd] == NULL;
+    file_close(file_p);
+  }
 }
 
 static struct file * file_get(int fd){
-  if(fd > 1 && fd < 128){
+  if(fd >= 2 && fd <= 127){
     return thread_current()->file_descriptors[fd];
   }
   else{
