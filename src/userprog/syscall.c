@@ -22,6 +22,7 @@ static int write (int fd, const void *buffer, unsigned size);
 static void seek (int fd, unsigned position);
 static unsigned tell (int fd);
 static void close (int fd);
+static void check_argument(void *arg1);
 
 
 void
@@ -35,11 +36,12 @@ static void
 syscall_handler (struct intr_frame *f) 
 {
   /* Check provided stack pointer for validity */
-  if(!is_user_vaddr(f->esp) || !pagedir_get_page (thread_current()->pagedir, f->esp)){ 
+  check_argument(f->esp);
+  int syscall_number = *(int *)f->esp;
+  if(f->esp == NULL ){ 
     exit(-1);
   }
- 
-  int syscall_number = *(int *)f->esp;
+
   // argument offsets
   // arg1 = f->esp + 4
   // arg2 = f->esp + 8
@@ -48,47 +50,91 @@ syscall_handler (struct intr_frame *f)
   // ints are *int *
   switch (syscall_number)
   {
+    
     case SYS_HALT:
     //pintos -v -k -T 60 --smp 2 --kvm  --filesys-size=2 -p tests/userprog/halt -a halt -- -q  -f run halt
-     
+      // no arguments
       halt();
       break;
     case SYS_EXIT:
+      check_argument(f->esp + 4);
+      printf("exit: %d\n", *(int *)(f->esp + 4));
+      thread_current()->exit_status = *(int *)(f->esp + 4);
+      printf("exit: %d\n", thread_current()->exit_status);
       exit(*(int *)(f->esp + 4));
       break;
     case SYS_EXEC:
+      check_argument((f->esp + 4));
       f->eax = exec(*(char **)(f->esp + 4));
       break;
     case SYS_WAIT:
+      check_argument(f->esp + 4);
       f->eax = wait(*(int *)(f->esp + 4));
       break;
     case SYS_CREATE:
+    if (!pagedir_get_page(thread_current()->pagedir,f->esp))
+      {
+        exit(-1);
+      }
+      check_argument(f->esp + 4);
+      check_argument(f->esp + 8);
       f->eax = create(*(char **)(f->esp + 4), *(unsigned *)(f->esp + 8));
       break;
     case SYS_REMOVE:
+      if (!pagedir_get_page(thread_current()->pagedir,f->esp))
+      {
+        exit(-1);
+      }
+      check_argument(f->esp + 4);
       f->eax = remove(*(char **)(f->esp + 4));
       break;
     case SYS_OPEN:
+      check_argument(f->esp + 4);
       f->eax = open(*(char **)(f->esp + 4));
       break;
     case SYS_FILESIZE:
+      check_argument(f->esp + 4);
       f->eax = filesize(*(int *)(f->esp + 4));
       break;
     case SYS_READ:
+      check_argument(f->esp + 4);
+      check_argument(f->esp + 8);
+      check_argument(f->esp + 12);
       f->eax = read(*(int *)(f->esp + 4), *(void **)(f->esp + 8), *(unsigned *)(f->esp + 12));
       break;
     case SYS_WRITE:
+      if (!pagedir_get_page(thread_current()->pagedir,f->esp))
+      {
+        exit(-1);
+      }
+      check_argument(f->esp + 4);
+      check_argument(f->esp + 8);
+      check_argument(f->esp + 12);
       f->eax = write(*(int *)(f->esp + 4), *(void **)(f->esp + 8), *(unsigned *)(f->esp + 12));
       break;
     case SYS_SEEK:
+      check_argument(f->esp + 4);
+      check_argument(f->esp + 8);
       seek(*(int *)(f->esp + 4), *(unsigned *)(f->esp + 8));
       break;
     case SYS_TELL:
+      check_argument(f->esp + 4);
       f->eax = tell(*(int *)(f->esp + 4));
       break;
     case SYS_CLOSE:
+      check_argument(f->esp + 4);
       close(*(int *)(f->esp + 4));
       break;
+  }
+}
+
+static void check_argument(void *arg1)
+{
+  // printf("%s", pagedir_get_page(thread_current()->pagedir, arg1));
+
+  if(!is_user_vaddr(arg1) || arg1 == NULL || pagedir_get_page(thread_current()->pagedir,arg1 ) == NULL){ 
+    printf("check_argument: %p\n", arg1);
+    exit(-1);
   }
 }
 
@@ -126,8 +172,26 @@ You must use appropriate synchronization to ensure this.
 */
 static int exec(const char *cmd_line)
 {
-  printf("exec: %s\n", cmd_line);
+  check_argument(cmd_line);
+  // printf("exec: %s\n", cmd_line);
+  //copy the command line so we can iterate through it safely
+  char *cmd_line_copy = malloc(strlen(cmd_line) + 1);
+  strlcpy(cmd_line_copy, cmd_line, strlen(cmd_line) + 1);
   // execute the command line
+  //check if the file exists and is not a directory
+  // get the first word of the command line
+  char *first_word = malloc(strlen(cmd_line) + 1);
+  char *save_ptr;
+  first_word = strtok_r(cmd_line_copy, " ", &save_ptr);
+  // printf("first_word: %s\n", first_word);
+  struct file *file = filesys_open(first_word);
+  if(file == NULL){
+    printf("exec: file not found\n");
+    return -1;
+  }
+  file_close(file);
+  free(cmd_line_copy);
+  
   int pid = process_execute(cmd_line);
   return pid;
 
@@ -176,9 +240,7 @@ static bool create (const char *file, unsigned initial_size){
   
 
   /* Check provided stack pointer for validity */
-  if(!file || !is_user_vaddr(file) || !pagedir_get_page (thread_current()->pagedir, file)){ 
-    exit(-1);
-  }
+  check_argument(file);
   
   return filesys_create(file, initial_size);
 
@@ -192,6 +254,9 @@ See Removing an Open File, for details.
 static bool remove (const char *file)
 {
   // remove the file
+  if(file == NULL){
+    exit(-1);
+  }
   return filesys_remove(file);
 
 }
