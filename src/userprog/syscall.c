@@ -330,7 +330,7 @@ Exiting or terminating a process implicitly closes all its open file descriptors
 static void close (int fd)
 {
   // close the file
-  if(fd > 1){
+  if(fd >= 2 && fd <= 127){
     struct file * file_p = file_get(fd);
     struct thread *t = thread_current();
     ASSERT(t->open_files > 0);
