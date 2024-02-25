@@ -244,9 +244,6 @@ Returns the size, in bytes, of the file open as fd.
 */
 static int filesize (int fd)
 {
-  // convert fd to file ptr
-  struct thread *t = thread_current();
-  struct file *file_p = t->file_descriptors[fd - 2];
   // get the file size
   return file_length(file_get(fd));
 
@@ -260,15 +257,9 @@ Fd 0 reads from the keyboard using input_getc().
 static int read (int fd, void *buffer, unsigned size)
 {
     struct thread *t = thread_current();
-    if(fd > FD_MAX){
+    if(fd > FD_MAX || fd == 1 || fd < 0 ||  t->file_descriptors[fd] == NULL){
       return -1;
     }
-    if(fd == 1 || fd < 0 ||  t->file_descriptors[fd] == NULL){
-      return -1;
-    }
-    struct file *file_p = t->file_descriptors[fd];
-    // if bad file descriptor or reading std out
-
 
     // read from the file
     return file_read(file_get(fd), buffer, size);
