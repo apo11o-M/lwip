@@ -13,7 +13,6 @@
 
 static void syscall_handler (struct intr_frame *);
 static void halt();
-static void exit(int status);
 static int exec(const char *cmd_line);
 static int wait(int pid);
 static bool create (const char *file, unsigned initial_size);
@@ -151,7 +150,7 @@ Terminates the current user program, returning status to the kernel.
 If the process's parent waits for it (see below), this is the status that will be returned. 
 Conventionally, a status of 0 indicates success and nonzero values indicate errors.
 */
-static void exit(int status)
+void exit(int status)
 {
   struct thread *cur = thread_current();
   // set child status in child struct
@@ -340,7 +339,6 @@ confusing both human readers and our grading scripts.
 */
 static int write (int fd, const void *buffer, unsigned size)
 {
-  check_argument(buffer);
   if(fd == 0){
     return -1;
   }
@@ -390,7 +388,7 @@ static void close (int fd)
     struct file * file_p = file_get(fd);
     // ASSERT(t->open_files > 0);
     t->open_files--;
-    t->file_descriptors[fd] == NULL;
+    t->file_descriptors[fd] = NULL;
     file_close(file_p);
   }
 }
