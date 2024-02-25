@@ -68,7 +68,9 @@ syscall_handler (struct intr_frame *f)
       break;
     case SYS_EXEC:
       check_argument((f->esp + 4));
+      lock_acquire (&file_lock);
       f->eax = exec(*(char **)(f->esp + 4));
+      lock_release (&file_lock);
       break;
     case SYS_WAIT:
       check_argument(f->esp + 4);
@@ -81,7 +83,9 @@ syscall_handler (struct intr_frame *f)
       }
       check_argument(f->esp + 4);
       check_argument(f->esp + 8);
+      lock_acquire(&file_lock);
       f->eax = create(*(char **)(f->esp + 4), *(unsigned *)(f->esp + 8));
+      lock_release(&file_lock);
       break;
     case SYS_REMOVE:
       if (!pagedir_get_page(thread_current()->pagedir,f->esp))
@@ -89,15 +93,21 @@ syscall_handler (struct intr_frame *f)
         exit(-1);
       }
       check_argument(f->esp + 4);
+      lock_acquire(&file_lock);
       f->eax = remove(*(char **)(f->esp + 4));
+      lock_release(&file_lock);
       break;
     case SYS_OPEN:
       check_argument(f->esp + 4);
+      lock_acquire(&file_lock);
       f->eax = open(*(char **)(f->esp + 4));
+      lock_release(&file_lock);
       break;
     case SYS_FILESIZE:
       check_argument(f->esp + 4);
+      lock_acquire(&file_lock);
       f->eax = filesize(*(int *)(f->esp + 4));
+      lock_release(&file_lock);
       break;
     case SYS_READ:
       check_argument(f->esp + 4);
@@ -122,15 +132,21 @@ syscall_handler (struct intr_frame *f)
     case SYS_SEEK:
       check_argument(f->esp + 4);
       check_argument(f->esp + 8);
+      lock_acquire(&file_lock);
       seek(*(int *)(f->esp + 4), *(unsigned *)(f->esp + 8));
+      lock_release(&file_lock);
       break;
     case SYS_TELL:
       check_argument(f->esp + 4);
+      lock_acquire(&file_lock);
       f->eax = tell(*(int *)(f->esp + 4));
+      lock_acquire(&file_lock);
       break;
     case SYS_CLOSE:
       check_argument(f->esp + 4);
+      lock_acquire(&file_lock);
       close(*(int *)(f->esp + 4));
+      lock_release(&file_lock);
       break;
   }
 }

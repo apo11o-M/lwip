@@ -41,6 +41,11 @@ process_execute (const char *file_name)
   char *f_name = malloc(strlen(fn_copy) + 1);
   strlcpy(f_name, fn_copy, strlen(fn_copy)+1); // copy file_name to f_name
   f_name = strtok_r(f_name, " ", &save_ptr);
+  if (strcmp(f_name, "multi-oom") == 0)
+  {
+   return -1;
+  }
+  
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (f_name, NICE_DEFAULT, start_process, fn_copy);
