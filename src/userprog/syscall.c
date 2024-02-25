@@ -339,6 +339,7 @@ confusing both human readers and our grading scripts.
 */
 static int write (int fd, const void *buffer, unsigned size)
 {
+  check_argument(buffer);
   if(fd == 0){
     return -1;
   }

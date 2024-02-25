@@ -309,8 +309,8 @@ load (const char *file_name, void (**eip) (void), void **esp, struct file** file
 
   int argc = 0;
   char *args[128];
-  // printf("file_name = %s\n", file_name);
-  // Use a while loop to parse the arguments
+
+  // Use a for loop to parse the arguments
   char *token, *save_ptr;
   for (token = strtok_r(file_name, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr)){
     args[argc] = token;
