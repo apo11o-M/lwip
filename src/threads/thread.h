@@ -109,7 +109,7 @@ struct thread
   void * parent; /* Parent thread id. */
 
   int open_files;
-  struct file *file_descriptors[FD_MAX];
+  struct file *file_descriptors[FD_MAX]; // indices 0 and 1 are always unoccupied
 
 
 #ifdef USERPROG

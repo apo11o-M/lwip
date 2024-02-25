@@ -209,6 +209,8 @@ do_thread_create (const char *name, int nice, thread_func *function, void *aux)
     sf->ebp = 0;
 
     t->open_files = 0;
+    // t->file_descriptors[0] = stdin;
+    // t->file_descriptors[1] = stdout;
     return t;
 }
 
