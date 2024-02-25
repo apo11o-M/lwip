@@ -26,12 +26,14 @@ static unsigned tell (int fd);
 static void close (int fd);
 static void check_argument(void *arg1);
 static struct file * file_get(int fd);
+static struct lock file_lock;
 
 
 void
 syscall_init (void) 
 {
   printf("syscall_init\n");
+  lock_init(&file_lock);
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -101,7 +103,9 @@ syscall_handler (struct intr_frame *f)
       check_argument(f->esp + 4);
       check_argument(f->esp + 8);
       check_argument(f->esp + 12);
+      lock_acquire(&file_lock);
       f->eax = read(*(int *)(f->esp + 4), *(void **)(f->esp + 8), *(unsigned *)(f->esp + 12));
+      lock_release(&file_lock);
       break;
     case SYS_WRITE:
       if (!pagedir_get_page(thread_current()->pagedir,f->esp))
@@ -111,7 +115,9 @@ syscall_handler (struct intr_frame *f)
       check_argument(f->esp + 4);
       check_argument(f->esp + 8);
       check_argument(f->esp + 12);
+      
       f->eax = write(*(int *)(f->esp + 4), *(void **)(f->esp + 8), *(unsigned *)(f->esp + 12));
+      
       break;
     case SYS_SEEK:
       check_argument(f->esp + 4);
@@ -348,11 +354,18 @@ static int write (int fd, const void *buffer, unsigned size)
     return size;
   }
   // write to the file
+  
   struct file *file_p = file_get(fd);
   // return file_write(file_p, buffer, size);
-
+  lock_acquire(&file_lock);
   if(file_p){
-    return file_write(file_p, buffer, size);
+    off_t bytes_written = file_write(file_p, buffer, size);
+    lock_release(&file_lock);
+    return bytes_written;
+  }
+  else{
+    lock_release(&file_lock);
+    return -1;
   }
 }
 /*
