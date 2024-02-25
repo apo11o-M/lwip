@@ -258,6 +258,11 @@ static int read (int fd, void *buffer, unsigned size)
 {
     struct thread *t = thread_current();
     struct file *file_p = t->file_descriptors[fd - 2];
+    // if bad file descriptor or reading std out
+    if(fd == 1 || t->file_descriptors[fd - 2] == NULL){
+      printf("bad file descriptor\n");
+    }
+
     // read from the file
     return file_read(file_p, buffer, size);
 }
