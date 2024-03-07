@@ -112,8 +112,8 @@ struct thread
   struct file *file_descriptors[FD_MAX]; // indices 0 and 1 are always unoccupied
 
   /* Added for Project 3 (virtual memory) */
-  // struct list supp_page_table; 
-  // struct spinlock supp_page_lock;
+  struct list supp_page_table; 
+  struct spinlock supp_page_lock;
   /* ------------------------------------ */
 
 #ifdef USERPROG
