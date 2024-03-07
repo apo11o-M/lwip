@@ -27,6 +27,7 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp, struct f
 tid_t
 process_execute (const char *file_name) 
 {
+  printf("\nprocess_execute\n");
   char *fn_copy;
   char *save_ptr;
   tid_t tid;
@@ -41,10 +42,6 @@ process_execute (const char *file_name)
   char *f_name = malloc(strlen(fn_copy) + 1);
   strlcpy(f_name, fn_copy, strlen(fn_copy)+1); // copy file_name to f_name
   f_name = strtok_r(f_name, " ", &save_ptr);
-  if (strcmp(f_name, "multi-oom") == 0)
-  {
-   return -1;
-  }
   
 
   /* Create a new thread to execute FILE_NAME. */
@@ -52,7 +49,7 @@ process_execute (const char *file_name)
 
   free(f_name); // free no longer required f_name
 
-  if (tid == TID_ERROR)
+  if (tid == TID_ERROR)//
   {
     palloc_free_page (fn_copy);
     return -1;
@@ -172,6 +169,7 @@ process_wait (tid_t child_tid)
 void
 process_exit ()
 {
+  printf("\nprocess_exit\n");
   struct thread *cur = thread_current ();
   // extract kernel thread frame
   uint32_t *pd;
