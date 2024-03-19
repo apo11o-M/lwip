@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <bitmap.h>
 
-struct page_table_entry {
+struct supp_page_table_entry {
   void *virtual_addr;
   void *frame; // null if not resident
   struct thread *parent;
