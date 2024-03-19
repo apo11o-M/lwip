@@ -53,6 +53,8 @@
 #include "lib/kernel/x86.h"
 #include "lib/atomic-ops.h"
 
+#include "vm/page.h"
+
 /* Page directory with kernel mappings only. */
 uint32_t *init_page_dir;
 #ifdef FILESYS
@@ -197,6 +199,8 @@ paging_init (void)
   uint32_t *pd, *pt;
   size_t page;
   extern char _start, _end_kernel_text;
+
+  //TODO: extra initialization
 
   pd = init_page_dir = palloc_get_page (PAL_ASSERT | PAL_ZERO);
   pt = NULL;
