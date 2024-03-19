@@ -4,10 +4,11 @@
 
 struct supp_page_table_entry {
   void *virtual_addr;
-  void *frame; // null if not resident
+  void *frame; // null if not resident, points to frame table entry
   struct thread *parent;
   struct list_elem elem;
   // TODO: file mapping stuff
+  // TODO: add swap table information?
   // lock stored in thread struct
 };
 
