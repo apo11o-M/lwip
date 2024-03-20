@@ -543,11 +543,10 @@ setup_stack (void **esp, char **args, int argc)
 {
   uint8_t *kpage;
   bool success = false;
-  int i = 0;
-  // do{
-  //   printf("run %d\n", i++);
+
+
+  
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
-  // }while(kpage);
   if (kpage != NULL) {
     success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
     if (success) {

@@ -33,6 +33,7 @@
 #include "threads/mp.h"
 #include "threads/ipi.h"
 #include "threads/cpu.h"
+#include "vm/page.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #include "userprog/exception.h"
@@ -101,6 +102,10 @@ main (void)
   palloc_init (user_page_limit);
   malloc_init ();
   paging_init ();
+
+  /* initialize frame_table and lock */
+  list_init(&frame_table);
+  lock_init (&frame_table_lock);
 
   /* Initialize multiprocessor-related information. */
   mp_init ();
