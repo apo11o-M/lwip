@@ -6,6 +6,8 @@
 #include "threads/thread.h"
 #include "userprog/syscall.h"
 #include "threads/pte.h"
+#include "threads/palloc.h"
+#include "vm/page.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -159,6 +161,38 @@ page_fault (struct intr_frame *f)
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
      which fault_addr refers. */
+
+
+   if (user && not_present){
+      /* Search supplemental page table for the page that faulted */
+      struct list *supp_page_table = &thread_current()->supp_page_table;
+      struct page_table_entry *fault_page = NULL;
+      struct list_elem *e;
+
+      spinlock_acquire(&thread_current()->supp_page_lock);
+      for (e = list_begin(supp_page_table); e != list_end(supp_page_table); e = e->next)
+      {
+         struct page_table_entry *curr = list_entry(e, struct page_table_entry, elem);
+         void *vba = curr->virtual_addr;
+         if (fault_addr >= vba && fault_addr < vba + PGSIZE){
+            fault_page = curr;
+            break;
+         }
+      }
+      spinlock_release(&thread_current()->supp_page_lock);
+
+      if (fault_page){
+         /* If the page was found, get a frame to store the page*/
+         struct frame_table_entry *frame = palloc_get_page(PAL_USER); /* TODO: replace palloc_get_page with new function */
+         frame->resident = fault_page;
+         fault_page->frame = frame;
+
+         /* TODO: Read the data into the frame */
+
+         return;
+      }
+   }
+
   printf ("Page fault at %p: %s error %s page in %s context.\n",
           fault_addr,
           not_present ? "not present" : "rights violation",

@@ -20,5 +20,7 @@ struct frame_table_entry {
 struct spinlock frame_table_lock; // TODO: look at turning this into a per-frame lock
 static struct list frame_table;
 
+struct list frame_table;
+
 struct bitmap swap_table;
 struct spinlock swap_table_lock;
