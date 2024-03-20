@@ -78,6 +78,7 @@ thread_init (void)
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_boot_thread (initial_thread, bcpu);
+
 }
 
 /*
@@ -248,7 +249,10 @@ thread_create (const char *name, int nice, thread_func *function, void *aux)
   cp->status = -1;
   list_push_back (&thread_current ()->child_list, &cp->elem);
 
-
+  /* init supplementary page table and lock */
+  list_init(&t->supp_page_table);
+  lock_init(&t->supp_page_lock);
+  
   /* Add to ready queue. */
   wake_up_new_thread (t);
   return tid;

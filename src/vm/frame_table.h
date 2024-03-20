@@ -5,7 +5,7 @@
 // evicts if necessary
 void* get_frame(void* v_addr);
 // helper function for eviction
-void evict();
+void* evict();
 
 // moves frame to swap partition
 // panic if no slots available
