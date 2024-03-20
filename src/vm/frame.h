@@ -13,6 +13,9 @@ struct frame_table_entry {
 };
 static struct list frame_table;
 
+/*frame table lock*/
+static struct spinlock frame_table_lock; // TODO: look at turning this into a per-frame lock
+
 // gets a free frame and returns frame_table_entry corresponding to the selected frame
 // evicts if necessary
 struct frame_table_entry* get_frame(void* v_addr);

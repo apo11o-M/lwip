@@ -1,4 +1,5 @@
 #include "vm/frame.h"
+#include "threads/init.h"
 #include "threads/palloc.h"
 
 struct frame_table_entry* get_frame(void* v_addr){
