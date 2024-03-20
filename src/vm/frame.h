@@ -1,3 +1,5 @@
+#ifndef VM_FRAME_H
+#define VM_FRAME_H
 #include "vaddr.h"
 #include "list.h"
 // macro to verify page alignment
@@ -18,7 +20,7 @@ struct frame_table_entry* get_frame(void* v_addr);
 
 // helper function for eviction
 // returns frame_table entry
-void* evict();
+struct frame_table_entry* evict();
 
 // moves frame to swap partition
 // panic if no slots available
@@ -29,3 +31,5 @@ void move_from_swap();
 // run use frame table to manage file mappings with mmap
 void frame_mmap();
 void frame_unmmap();
+
+#endif
