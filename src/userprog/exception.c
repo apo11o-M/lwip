@@ -8,6 +8,7 @@
 #include "threads/pte.h"
 #include "threads/palloc.h"
 #include "vm/page.h"
+#include "vm/frame.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -186,7 +187,7 @@ page_fault (struct intr_frame *f)
          struct frame_table_entry *frame = palloc_get_page(PAL_USER); /* TODO: replace palloc_get_page with new function */
          frame->resident = fault_page;
          fault_page->frame = frame;
-
+         // TODO: use pagedir interface to map vaddr to frame addr
          /* TODO: Read the data into the frame */
 
          return;
