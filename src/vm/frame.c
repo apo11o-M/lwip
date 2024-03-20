@@ -2,9 +2,12 @@
 #include "threads/init.h"
 #include "threads/palloc.h"
 
-struct frame_table_entry* get_frame(void* v_addr){
+struct frame_table_entry* get_frame(){
+    return get_multiple_frames(1);
+}
+struct frame_table_entry* get_multiple_frames(int num_frames){
     // attempt to get a free page from the page directory using the virtual addr of the provided page
-    void* frame_addr = palloc_get_page(PAL_USER | PAL_ZERO);
+    void* frame_addr = palloc_get_multiple(PAL_USER | PAL_ZERO, num_frames);
     // if no page exists
     if (frame_addr == NULL){
     // start eviction

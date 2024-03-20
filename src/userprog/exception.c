@@ -184,7 +184,7 @@ page_fault (struct intr_frame *f)
 
       if (fault_page){
          /* If the page was found, get a frame to store the page*/
-         struct frame_table_entry *frame = palloc_get_page(PAL_USER); /* TODO: replace palloc_get_page with new function */
+         struct frame_table_entry *frame = get_frame(); /* TODO: replace palloc_get_page with new function */
          frame->resident = fault_page;
          fault_page->frame = frame;
          // TODO: use pagedir interface to map vaddr to frame addr
