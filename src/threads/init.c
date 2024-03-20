@@ -58,6 +58,10 @@
 
 /* Page directory with kernel mappings only. */
 uint32_t *init_page_dir;
+
+/*frame table lock*/
+static struct spinlock frame_table_lock; // TODO: look at turning this into a per-frame lock
+
 #ifdef FILESYS
 /* -f: Format the file system? */
 static bool format_filesys;
@@ -107,7 +111,7 @@ main (void)
 
   /* initialize frame_table and lock */
   list_init(&frame_table);
-  lock_init (&frame_table_lock);
+  spinlock_init (&frame_table_lock);
 
   /* Initialize multiprocessor-related information. */
   mp_init ();

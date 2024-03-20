@@ -15,9 +15,4 @@ struct supp_page_table_entry {
 };
 
 
-struct list frame_table;
-
-struct bitmap swap_table;
-struct spinlock swap_table_lock;
-
 #endif
