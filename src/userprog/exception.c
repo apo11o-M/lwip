@@ -166,13 +166,13 @@ page_fault (struct intr_frame *f)
    if (user && not_present){
       /* Search supplemental page table for the page that faulted */
       struct list *supp_page_table = &thread_current()->supp_page_table;
-      struct page_table_entry *fault_page = NULL;
+      struct supp_page_table_entry *fault_page = NULL;
       struct list_elem *e;
 
       spinlock_acquire(&thread_current()->supp_page_lock);
       for (e = list_begin(supp_page_table); e != list_end(supp_page_table); e = e->next)
       {
-         struct page_table_entry *curr = list_entry(e, struct page_table_entry, elem);
+         struct supp_page_table_entry *curr = list_entry(e, struct supp_page_table_entry, elem);
          void *vba = curr->virtual_addr;
          if (fault_addr >= vba && fault_addr < vba + PGSIZE){
             fault_page = curr;
