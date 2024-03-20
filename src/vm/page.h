@@ -3,6 +3,7 @@
 #include <list.h>
 #include <stdint.h>
 #include <bitmap.h>
+#include "threads/synch.h"
 
 struct supp_page_table_entry {
   void *virtual_addr;
@@ -13,6 +14,7 @@ struct supp_page_table_entry {
   // TODO: add swap table information?
   // lock stored in thread struct
 };
-
+static struct bitmap* swap_table;
+static struct spinlock swap_table_lock;
 
 #endif

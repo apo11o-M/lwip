@@ -2,6 +2,8 @@
 #define VM_FRAME_H
 #include "threads/vaddr.h"
 #include <list.h>
+#include "threads/synch.h"
+
 // macro to verify page alignment
 #define aligned(addr)  ((addr) % PGSIZE == 0)
 
@@ -18,7 +20,7 @@ static struct spinlock frame_table_lock; // TODO: look at turning this into a pe
 
 // gets a free frame and returns frame_table_entry corresponding to the selected frame
 // evicts if necessary
-struct frame_table_entry* get_frame();
+struct frame_table_entry* get_frame(void);
 struct frame_table_entry* get_multiple_frames(int num_frames);
 
 // helper function for eviction
