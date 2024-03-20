@@ -1,3 +1,5 @@
+#ifndef VM_PAGE_H
+#define VM_PAGE_H
 #include <list.h>
 #include <stdint.h>
 #include <bitmap.h>
@@ -17,3 +19,5 @@ struct list frame_table;
 
 struct bitmap swap_table;
 struct spinlock swap_table_lock;
+
+#endif

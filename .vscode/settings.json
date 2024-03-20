@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "stdio.h": "c"
+        "*.pl": "prolog",
+        "stdio.h": "c",
+        "vaddr.h": "c"
     }
 }

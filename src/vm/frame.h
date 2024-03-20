@@ -1,7 +1,7 @@
 #ifndef VM_FRAME_H
 #define VM_FRAME_H
-#include "vaddr.h"
-#include "list.h"
+#include "threads/vaddr.h"
+#include <list.h>
 // macro to verify page alignment
 #define aligned(addr)  ((addr) % PGSIZE == 0)
 
