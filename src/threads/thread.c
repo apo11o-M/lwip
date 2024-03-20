@@ -249,9 +249,7 @@ thread_create (const char *name, int nice, thread_func *function, void *aux)
   cp->status = -1;
   list_push_back (&thread_current ()->child_list, &cp->elem);
 
-  /* init supplementary page table and lock */
-  list_init(&t->supp_page_table);
-  lock_init(&t->supp_page_lock);
+
   
   /* Add to ready queue. */
   wake_up_new_thread (t);
@@ -579,6 +577,9 @@ init_thread (struct thread *t, const char *name, int nice)
   t->nice = nice;
   t->magic = THREAD_MAGIC;
   list_init (&t->child_list);
+  /* init supplementary page table and lock */
+  list_init(&t->supp_page_table);
+  spinlock_init(&t->supp_page_lock);
   t->parent = running_thread ();
   if (cpu_can_acquire_spinlock)
     spinlock_acquire (&all_lock);
@@ -592,6 +593,7 @@ init_thread (struct thread *t, const char *name, int nice)
 static void *
 alloc_frame (struct thread *t, size_t size)
 {
+  printf("thread to alloc: %p\n", t);
   /* Stack data is always allocated in word-size units. */
   ASSERT (is_thread (t));
   ASSERT (size % sizeof(uint32_t) == 0);
