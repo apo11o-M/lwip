@@ -543,20 +543,11 @@ setup_stack (void **esp, char **args, int argc)
 {
   uint8_t *kpage;
   bool success = false;
-
-  // print out the arguments
-  // printf("(args) begin\n");
-  // printf("(args) argc = %d\n", argc);
-  // for (int i = 0; i < argc; i++){
-  //   printf("(args) argv[%d] = \'%s\'\n", i, args[i]);
-  // }
-  // if (argc == 1){
-  //   printf("(args) argv[1] = null\n");
-  // }
-  // printf("(args) end\n");
-  // =======================
-  
+  int i = 0;
+  // do{
+  //   printf("run %d\n", i++);
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
+  // }while(kpage);
   if (kpage != NULL) {
     success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
     if (success) {

@@ -24,6 +24,8 @@ static int write (int fd, const void *buffer, unsigned size);
 static void seek (int fd, unsigned position);
 static unsigned tell (int fd);
 static void close (int fd);
+static void mmap (int fd, void* addr);
+static void munmap (int fd, void* addr);
 static void check_argument(void *arg1);
 static struct file * file_get(int fd);
 static struct lock file_lock;
