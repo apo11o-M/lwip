@@ -3,9 +3,7 @@
 #include "threads/palloc.h"
 #include <stdio.h>
 #include "threads/malloc.h"
-struct frame_table_entry* get_frame(void){
-    return get_multiple_frames(1);
-}
+
 void setup_frame_table(void){
     /* init frame table and lock */
     list_init(&frame_table);
@@ -21,6 +19,9 @@ void setup_frame_table(void){
     // spinlock_release(&frame_table_lock);
 }
 
+struct frame_table_entry* get_frame(void){
+    return get_multiple_frames(1);
+}
 
 struct frame_table_entry* get_multiple_frames(int num_frames){
     // attempt to get a free page from the page directory using the virtual addr of the provided page
@@ -31,6 +32,7 @@ struct frame_table_entry* get_multiple_frames(int num_frames){
         return evict();
     }
     else{
+    /*
     // find frame table entry that corresponds to the free frame
     struct frame_table_entry* free_frame = NULL;
     struct list_elem *e;
@@ -46,6 +48,15 @@ struct frame_table_entry* get_multiple_frames(int num_frames){
     }
     spinlock_release(&frame_table_lock);
     return free_frame;
+    */
+    /* create new frame table entry*/
+    struct frame_table_entry* new_frame = (struct frame_table_entry*)malloc(sizeof(struct frame_table_entry));
+    new_frame->physical_addr = frame_addr;
+    /* add new frame table entry to list*/
+    spinlock_acquire(&frame_table_lock);
+    list_push_back(&frame_table, &new_frame->elem);
+    spinlock_release(&frame_table_lock);
+    return new_frame;
     }
 }
 

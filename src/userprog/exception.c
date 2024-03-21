@@ -5,6 +5,7 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "userprog/syscall.h"
+#include "userprog/process.h"
 #include "threads/pte.h"
 #include "threads/palloc.h"
 #include "vm/page.h"
@@ -164,8 +165,9 @@ page_fault (struct intr_frame *f)
      which fault_addr refers. */
 
 
-   if (user && not_present){
-      printf("faulting while trying to access: %p\n", fault_addr);
+   printf("faulting while trying to access: %p at page %d\n", fault_addr, pg_no(fault_addr));
+
+   if (user){
       struct list *supp_page_table = &thread_current()->supp_page_table;
       struct supp_page_table_entry *fault_page = NULL;
       struct list_elem *e;
@@ -184,7 +186,7 @@ page_fault (struct intr_frame *f)
       }
       /* if no existing page table entry found, create and add to supp page table */
       if(!fault_page){
-         add_supp_page_entry(supp_page_table);
+         fault_page = add_supp_page_entry(supp_page_table);
       }
       spinlock_release(&thread_current()->supp_page_lock);
 
@@ -193,6 +195,7 @@ page_fault (struct intr_frame *f)
       struct frame_table_entry *frame = get_frame();
       frame->resident = fault_page;
       fault_page->frame = frame;
+      install_page (fault_page->virtual_addr, frame->physical_addr, true);
 
       /* TODO: use pagedir interface to map vaddr to frame addr */
       /* TODO: Read the data into the frame */
