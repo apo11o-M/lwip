@@ -17,4 +17,12 @@ struct supp_page_table_entry {
 static struct bitmap* swap_table;
 static struct spinlock swap_table_lock;
 
+
+// TODO: Implement
+// function to set up page table, use lookup_page() to populate list of free pages
+// void setup_supp_page_table();
+
+// add new entry to page table
+struct supp_page_table_entry* add_supp_page_entry(struct list* supp_page_table);
+
 #endif

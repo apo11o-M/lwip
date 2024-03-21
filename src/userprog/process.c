@@ -16,7 +16,9 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
 #include <stdlib.h>
+#include "vm/page.h"
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp, struct file** file_ptr);
 
@@ -545,8 +547,10 @@ setup_stack (void **esp, char **args, int argc)
   bool success = false;
 
 
-  
+  // TODO: use get_page here
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
+  // TODO:populate supplemental page table
+  // setup_supp_page_table();
   if (kpage != NULL) {
     success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
     if (success) {

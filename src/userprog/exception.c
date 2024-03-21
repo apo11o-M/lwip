@@ -165,33 +165,38 @@ page_fault (struct intr_frame *f)
 
 
    if (user && not_present){
-      /* Search supplemental page table for the page that faulted */
+      printf("faulting while trying to access: %p\n", fault_addr);
       struct list *supp_page_table = &thread_current()->supp_page_table;
       struct supp_page_table_entry *fault_page = NULL;
       struct list_elem *e;
 
+      /* Search supplemental page table for the page that faulted */
       spinlock_acquire(&thread_current()->supp_page_lock);
       for (e = list_begin(supp_page_table); e != list_end(supp_page_table); e = e->next)
       {
          struct supp_page_table_entry *curr = list_entry(e, struct supp_page_table_entry, elem);
-         void *vba = curr->virtual_addr;
-         if (fault_addr >= vba && fault_addr < vba + PGSIZE){
+         /* if current page number matches faulted page number*/
+         if (pg_no(fault_addr)==pg_no(curr->virtual_addr)){
+            /* existing supp page entry found, assign to faulted page*/
             fault_page = curr;
             break;
          }
       }
+      /* if no existing page table entry found, create and add to supp page table */
+      if(!fault_page){
+         add_supp_page_entry(supp_page_table);
+      }
       spinlock_release(&thread_current()->supp_page_lock);
 
-      if (fault_page){
-         /* If the page was found, get a frame to store the page*/
-         struct frame_table_entry *frame = get_frame(); /* TODO: replace palloc_get_page with new function */
-         frame->resident = fault_page;
-         fault_page->frame = frame;
-         // TODO: use pagedir interface to map vaddr to frame addr
-         /* TODO: Read the data into the frame */
 
-         return;
-      }
+      /* get a frame to store the page*/
+      struct frame_table_entry *frame = get_frame();
+      frame->resident = fault_page;
+      fault_page->frame = frame;
+
+      /* TODO: use pagedir interface to map vaddr to frame addr */
+      /* TODO: Read the data into the frame */
+      return;
    }
 
   printf ("Page fault at %p: %s error %s page in %s context.\n",

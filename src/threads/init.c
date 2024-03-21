@@ -107,9 +107,6 @@ main (void)
   malloc_init ();
   paging_init ();
 
-  /* initialize frame_table and lock */
-  list_init(&frame_table);
-  spinlock_init (&frame_table_lock);
 
   /* Initialize multiprocessor-related information. */
   mp_init ();
@@ -174,7 +171,8 @@ main (void)
   unsigned num_started = start_other_cpus ();
   printf ("Started %'"PRIu32" additional CPUs.\n", num_started);
   printf ("Boot complete.\n");
-  
+  /* initialize frame table entry */
+  setup_frame_table();
   /* Run actions specified on kernel command line. */
   run_actions (argv);
   /* Finish up. */

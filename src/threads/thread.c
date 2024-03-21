@@ -593,7 +593,6 @@ init_thread (struct thread *t, const char *name, int nice)
 static void *
 alloc_frame (struct thread *t, size_t size)
 {
-  printf("thread to alloc: %p\n", t);
   /* Stack data is always allocated in word-size units. */
   ASSERT (is_thread (t));
   ASSERT (size % sizeof(uint32_t) == 0);

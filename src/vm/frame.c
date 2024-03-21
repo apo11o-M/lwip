@@ -1,10 +1,26 @@
 #include "vm/frame.h"
 #include "threads/init.h"
 #include "threads/palloc.h"
-
+#include <stdio.h>
+#include "threads/malloc.h"
 struct frame_table_entry* get_frame(void){
     return get_multiple_frames(1);
 }
+void setup_frame_table(void){
+    /* init frame table and lock */
+    list_init(&frame_table);
+    spinlock_init (&frame_table_lock);
+    /* add frames to the supplemental page table while */
+    // spinlock_acquire(&frame_table_lock);
+    // void* frame_ptr = palloc_get_page(PAL_USER | PAL_ZERO);
+    // while(frame_ptr){
+    //     struct frame_table_entry* new_frame_table_entry = (struct frame_table_entry*)malloc(sizeof(struct frame_table_entry));
+    //     frame_ptr = palloc_get_page(PAL_USER | PAL_ZERO);   
+    //     new_frame_table_entry->physical_addr = frame_ptr;
+    // }
+    // spinlock_release(&frame_table_lock);
+}
+
 
 struct frame_table_entry* get_multiple_frames(int num_frames){
     // attempt to get a free page from the page directory using the virtual addr of the provided page
@@ -37,10 +53,11 @@ struct frame_table_entry* get_multiple_frames(int num_frames){
 // helper function for eviction
 // TEMP: returns addr of first element in frame table
 // TODO: Add a fair eviction algorithm, send data to swap partition
-struct frame_table_entry* evict(){
-    struct frame_table_entry* free_frame = NULL;
-    spinlock_acquire(&frame_table_lock);
-    free_frame = list_entry(list_begin(&frame_table), struct frame_table_entry, elem);
-    spinlock_release(&frame_table_lock);
-    return free_frame;
+struct frame_table_entry* evict(void){
+    PANIC("trying to evict");
+    // struct frame_table_entry* free_frame = NULL;
+    // spinlock_acquire(&frame_table_lock);
+    // free_frame = list_entry(list_begin(&frame_table), struct frame_table_entry, elem);
+    // spinlock_release(&frame_table_lock);
+    // return free_frame;
 }
