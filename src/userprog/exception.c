@@ -165,8 +165,6 @@ page_fault (struct intr_frame *f)
      which fault_addr refers. */
 
 
-   printf("faulting while trying to access: %p at page %d\n", fault_addr, pg_no(fault_addr));
-
    if (user){
       struct list *supp_page_table = &thread_current()->supp_page_table;
       struct supp_page_table_entry *supp_fault_page = NULL;

@@ -29,7 +29,6 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp, struct f
 tid_t
 process_execute (const char *file_name) 
 {
-  printf("\nprocess_execute\n");
   char *fn_copy;
   char *save_ptr;
   tid_t tid;
@@ -171,7 +170,6 @@ process_wait (tid_t child_tid)
 void
 process_exit ()
 {
-  printf("\nprocess_exit\n");
   struct thread *cur = thread_current ();
   // extract kernel thread frame
   uint32_t *pd;
