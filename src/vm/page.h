@@ -14,8 +14,7 @@ struct supp_page_table_entry {
   // TODO: add swap table information?
   // lock stored in thread struct
 };
-static struct bitmap* swap_table;
-static struct spinlock swap_table_lock;
+
 
 
 // TODO: Implement
