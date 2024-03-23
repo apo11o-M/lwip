@@ -114,6 +114,24 @@ kill (struct intr_frame *f)
     }
 }
 
+// check if the supplementation table contains the page for the user virtual 
+// address
+static bool 
+supp_page_table_contains(void *vaddr) {
+  struct thread *cur = thread_current();
+  struct list_elem *e;
+
+  for (e = list_begin(&cur->supp_page_table); 
+       e != list_end(&cur->supp_page_table);
+       e = list_next(e)) {
+    struct supp_page_table_entry *entry = list_entry(e, struct supp_page_table_entry, elem);
+    if (pg_round_down(vaddr) == pg_round_down(entry->virtual_addr)) {
+      return true;  // Address is in the supplemental page table
+    }
+  }
+  return false;  // Address not found in the supplemental page table
+}
+
 /* Page fault handler.  This is a skeleton that must be filled in
    to implement virtual memory.  Some solutions to project 2 may
    also require modifying this code.
@@ -141,7 +159,6 @@ page_fault (struct intr_frame *f)
      (#PF)". */
   asm ("movl %%cr2, %0" : "=r" (fault_addr));
 
-
   /* Turn interrupts back on (they were only off so that we could
      be assured of reading CR2 before it changed). */
   intr_enable ();
@@ -154,51 +171,46 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
 
-   if(fault_addr == 0){
-      exit(-1);
-   }
-   if(user && !is_user_vaddr(fault_addr)){
-      exit(-1);
-   }
-  /* To implement virtual memory, delete the rest of the function
-     body, and replace it with code that brings in the page to
-     which fault_addr refers. */
+  if((fault_addr == NULL)
+      || (user && !is_user_vaddr(fault_addr)) 
+      || !supp_page_table_contains(fault_addr)){
+    exit(-1);
+  }
 
+  if (user){
+    struct list *supp_page_table = &thread_current()->supp_page_table;
+    struct supp_page_table_entry *supp_fault_page = NULL;
+    struct list_elem *e;
 
-   if (user){
-      struct list *supp_page_table = &thread_current()->supp_page_table;
-      struct supp_page_table_entry *supp_fault_page = NULL;
-      struct list_elem *e;
+    /* Search supplemental page table for the page that faulted */
+    spinlock_acquire(&thread_current()->supp_page_lock);
+    for (e = list_begin(supp_page_table); e != list_end(supp_page_table); e = e->next)
+    {
+        struct supp_page_table_entry *curr = list_entry(e, struct supp_page_table_entry, elem);
+        /* if current page number matches faulted page number*/
+        if (pg_no(fault_addr)==pg_no(curr->virtual_addr)){
+          /* existing supp page entry found, assign to faulted page*/
+          supp_fault_page = curr;
+          break;
+        }
+    }
+    /* if no existing page table entry found, create and add to supp page table */
+    if(!supp_fault_page){
+        supp_fault_page = add_supp_page_entry(supp_page_table);
+    }
+    spinlock_release(&thread_current()->supp_page_lock);
 
-      /* Search supplemental page table for the page that faulted */
-      spinlock_acquire(&thread_current()->supp_page_lock);
-      for (e = list_begin(supp_page_table); e != list_end(supp_page_table); e = e->next)
-      {
-         struct supp_page_table_entry *curr = list_entry(e, struct supp_page_table_entry, elem);
-         /* if current page number matches faulted page number*/
-         if (pg_no(fault_addr)==pg_no(curr->virtual_addr)){
-            /* existing supp page entry found, assign to faulted page*/
-            supp_fault_page = curr;
-            break;
-         }
-      }
-      /* if no existing page table entry found, create and add to supp page table */
-      if(!supp_fault_page){
-         supp_fault_page = add_supp_page_entry(supp_page_table);
-      }
-      spinlock_release(&thread_current()->supp_page_lock);
+    /* get a frame to store the page*/
+    struct frame_table_entry *new_frame = get_frame();
+    /* correlate data between new frame and supp page table entry*/      
+    new_frame->resident = supp_fault_page;
+    supp_fault_page->frame = new_frame;
+    supp_fault_page->virtual_addr = pg_round_down(fault_addr);
+    install_page (supp_fault_page->virtual_addr, new_frame->physical_addr, true);
 
-
-      /* get a frame to store the page*/
-      struct frame_table_entry *new_frame = get_frame();
-      /* correlate data between new frame and supp page table entry*/      
-      new_frame->resident = supp_fault_page;
-      supp_fault_page->frame = new_frame;
-      supp_fault_page->virtual_addr = pg_round_down(fault_addr);
-      install_page (supp_fault_page->virtual_addr, new_frame->physical_addr, true);
-      /* TODO: Read the data into the frame */
-      return;
-   }
+    /* TODO: Read the data into the frame */
+    return;
+  }
 
   printf ("Page fault at %p: %s error %s page in %s context.\n",
           fault_addr,
