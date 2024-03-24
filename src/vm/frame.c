@@ -30,8 +30,6 @@ struct frame_table_entry* get_frame(void) {
 
 struct frame_table_entry* get_multiple_frames(int num_frames) {
   struct frame_table_entry* new_frame = NULL;
-  void* frame_addr;
-
   // attempt to get a free page from the page directory using the virtual addr 
   // of the provided page
   void* frame_addr = palloc_get_multiple(PAL_USER | PAL_ZERO, num_frames);
@@ -40,35 +38,7 @@ struct frame_table_entry* get_multiple_frames(int num_frames) {
     return addr_to_frame(frame_addr);
   } else {
     // failed to allocate a page, start eviction
-    return evict();
-  }
-}
-
-
-/* create and return frame_table_entry struct for provided physical */
-struct frame_table_entry* addr_to_frame(void* frame_addr){
-  struct frame_table_entry* new_frame = NULL;
-
-    // TODO: add frames for each palloc-ed page
-    // if we allocated a free page, create a new frame table entry
-    new_frame = (struct frame_table_entry*)malloc(sizeof(struct frame_table_entry));
-
-    new_frame->physical_addr = frame_addr;
-    // no page is associated with this frame initially.
-    new_frame->resident = NULL;
-
-    spinlock_acquire(&frame_table_lock);
-    list_push_back(&frame_table, &new_frame->elem);
-    spinlock_release(&frame_table_lock);
-
-    if (new_frame == NULL) {
-      // failed to allocate memory for frame table entry
-      palloc_free_page(frame_addr);
-      return NULL;
-    }
-  }
-  else {
-    // failed to allocate a page, start eviction
+// failed to allocate a page, start eviction
     spinlock_acquire(&frame_table_lock); 
     new_frame = evict();
     
@@ -104,12 +74,34 @@ struct frame_table_entry* addr_to_frame(void* frame_addr){
     palloc_free_multiple(new_frame->physical_addr, num_frames);
 
     spinlock_release(&frame_table_lock);
-
-
+    return new_frame;
   }
-
-  return new_frame;
 }
+
+
+/* create and return frame_table_entry struct for provided physical */
+struct frame_table_entry* addr_to_frame(void* frame_addr){
+  struct frame_table_entry* new_frame = NULL;
+
+    // TODO: add frames for each palloc-ed page
+    // if we allocated a free page, create a new frame table entry
+    new_frame = (struct frame_table_entry*)malloc(sizeof(struct frame_table_entry));
+
+    new_frame->physical_addr = frame_addr;
+    // no page is associated with this frame initially.
+    new_frame->resident = NULL;
+
+    spinlock_acquire(&frame_table_lock);
+    list_push_back(&frame_table, &new_frame->elem);
+    spinlock_release(&frame_table_lock);
+
+    if (new_frame == NULL) {
+      // failed to allocate memory for frame table entry
+      palloc_free_page(frame_addr);
+      return NULL;
+    }
+    return new_frame;
+  }
 
 /* free frame and remove from frame table*/
 void free_frame(struct frame_table_entry* frame){
