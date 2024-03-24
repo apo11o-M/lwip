@@ -3,3 +3,4 @@ DESIGNDOC
 *.a
 *.o
 build
+settings.json

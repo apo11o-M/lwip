@@ -10,6 +10,9 @@ enum page_status {
   NOT_IN_SWAP
 };
 
+// 8MB stack size
+#define MAX_STACK_SIZE 8 * 1024 * 1024
+
 struct supp_page_table_entry {
   void *virtual_addr;
   void *frame; // null if not resident, points to frame table entry

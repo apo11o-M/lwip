@@ -176,16 +176,18 @@ page_fault (struct intr_frame *f)
     exit(-1);
   }
 
-  /* If the access was a write just past the current stack pointer, grow the stack */
-  if (write && fault_addr < f->esp && fault_addr >= f->esp - 32){
-    /* Stack Growth */
-    // TODO: check maximum stack size
 
-    f->esp -= 32; // TODO: verify this value
-  }
-  else if(!supp_page_table_contains(fault_addr)){
-    exit(-1);
-  }
+  /* Stack Growth */
+  if (write 
+    && fault_addr >= f->esp - 32
+    && fault_addr < PHYS_BASE){
+      // TODO: check maximum stack size
+      f->esp -= 32;
+    }
+    else if(!supp_page_table_contains(fault_addr)){
+      exit(-1);
+    }
+ 
 
   if (user){
     struct list *supp_page_table = &thread_current()->supp_page_table;
@@ -194,6 +196,8 @@ page_fault (struct intr_frame *f)
 
     /* Search supplemental page table for the page that faulted */
     spinlock_acquire(&thread_current()->supp_page_lock);
+     /* If the access was a write just past the current stack pointer, grow the stack */
+    
     for (e = list_begin(supp_page_table); e != list_end(supp_page_table); e = e->next)
     {
         struct supp_page_table_entry *curr = list_entry(e, struct supp_page_table_entry, elem);
@@ -204,9 +208,10 @@ page_fault (struct intr_frame *f)
           break;
         }
     }
+    
     /* if no existing page table entry found, create and add to supp page table */
     if(!supp_fault_page){
-        supp_fault_page = add_supp_page_entry(supp_page_table);
+        supp_fault_page = add_supp_page_entry(supp_page_table, fault_addr);
     }
     spinlock_release(&thread_current()->supp_page_lock);
 
@@ -218,7 +223,6 @@ page_fault (struct intr_frame *f)
     supp_fault_page->frame = new_frame;
     install_page (supp_fault_page->virtual_addr, new_frame->physical_addr, true);
 
-    /* TODO: Read the data into the frame */
     return;
   }
 
@@ -230,4 +234,3 @@ page_fault (struct intr_frame *f)
 
   kill (f);
 }
-
