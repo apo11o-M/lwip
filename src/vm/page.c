@@ -12,3 +12,9 @@ struct supp_page_table_entry* add_supp_page_entry(struct list* supp_page_table){
     list_push_back(supp_page_table, &new_entry->elem);
     return new_entry;
 }
+
+void free_supp_entry(struct supp_page_table_entry* supp_entry){
+    list_remove(&supp_entry->elem);
+    pagedir_clear_page(thread_current()->pagedir, supp_entry->virtual_addr);
+    free(supp_entry);
+}
