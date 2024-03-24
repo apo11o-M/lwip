@@ -505,31 +505,27 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
-      /* Get a page of memory. */
-      uint8_t *kpage = palloc_get_page (PAL_USER | (PAL_ZERO * zero));
         /* add frame for new phys page */
-        struct frame_table_entry* new_frame_entry = addr_to_frame(kpage);
+        struct frame_table_entry* new_frame_entry = get_frame ();
         /* create new supplemental page table entry*/
         spinlock_acquire(&thread_current()->supp_page_lock);
         struct supp_page_table_entry* new_page_entry = add_supp_page_entry(&thread_current()->supp_page_table);
         spinlock_release(&thread_current()->supp_page_lock);
         new_page_entry->virtual_addr = upage;
         match_frame_page(new_frame_entry, new_page_entry);
-      if (kpage == NULL)
-        return false;
 
       /* Load this page. */
-      if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
+      if (file_read (file, new_frame_entry->physical_addr, page_read_bytes) != (int) page_read_bytes)
         {
-          palloc_free_page (kpage);
+          palloc_free_page (new_frame_entry->physical_addr);
           return false; 
         }
-      memset (kpage + page_read_bytes, 0, page_zero_bytes);
+      memset (new_frame_entry->physical_addr + page_read_bytes, 0, page_zero_bytes);
 
       /* Add the page to the process's address space. */
-      if (!install_page (upage, kpage, writable)) 
+      if (!install_page (new_page_entry->virtual_addr, new_frame_entry->physical_addr, writable)) 
         {
-          palloc_free_page (kpage);
+          palloc_free_page (new_frame_entry->physical_addr);
           return false; 
         }
 
