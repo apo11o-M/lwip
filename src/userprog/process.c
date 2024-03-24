@@ -19,6 +19,7 @@
 #include "threads/malloc.h"
 #include <stdlib.h>
 #include "vm/page.h"
+#include "vm/frame.h"
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp, struct file** file_ptr);
 
@@ -292,9 +293,7 @@ struct Elf32_Phdr
 
 static bool setup_stack (void **esp, char **args, int argc);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
-static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
-                          uint32_t read_bytes, uint32_t zero_bytes,
-                          bool writable);
+
 
 /* Loads an ELF executable from FILE_NAME into the current thread.
    Stores the executable's entry point into *EIP
@@ -403,7 +402,7 @@ load (const char *file_name, void (**eip) (void), void **esp, struct file** file
                   zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
                 }
               if (!load_segment (file, file_page, (void *) mem_page,
-                                 read_bytes, zero_bytes, writable))
+                                 read_bytes, zero_bytes, writable, false))
                 goto done;
             }
           else
@@ -490,9 +489,8 @@ validate_segment (const struct Elf32_Phdr *phdr, struct file *file)
 
    Return true if successful, false if a memory allocation error
    or disk read error occurs. */
-static bool
-load_segment (struct file *file, off_t ofs, uint8_t *upage,
-              uint32_t read_bytes, uint32_t zero_bytes, bool writable) 
+bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
+              uint32_t read_bytes, uint32_t zero_bytes, bool writable, bool zero) 
 {
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT (pg_ofs (upage) == 0);
@@ -508,7 +506,15 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
       /* Get a page of memory. */
-      uint8_t *kpage = palloc_get_page (PAL_USER);
+      uint8_t *kpage = palloc_get_page (PAL_USER | (PAL_ZERO * zero));
+        /* add frame for new phys page */
+        struct frame_table_entry* new_frame_entry = addr_to_frame(kpage);
+        /* create new supplemental page table entry*/
+        spinlock_acquire(&thread_current()->supp_page_lock);
+        struct supp_page_table_entry* new_page_entry = add_supp_page_entry(&thread_current()->supp_page_table);
+        spinlock_release(&thread_current()->supp_page_lock);
+        new_page_entry->virtual_addr = upage;
+        match_frame_page(new_frame_entry, new_page_entry);
       if (kpage == NULL)
         return false;
 

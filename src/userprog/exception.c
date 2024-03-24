@@ -212,10 +212,10 @@ page_fault (struct intr_frame *f)
 
     /* get a frame to store the page*/
     struct frame_table_entry *new_frame = get_frame();
-    /* correlate data between new frame and supp page table entry*/      
+    /* correlate data between new frame and supp page table entry*/   
+    supp_fault_page->virtual_addr = pg_round_down(fault_addr);
     new_frame->resident = supp_fault_page;
     supp_fault_page->frame = new_frame;
-    supp_fault_page->virtual_addr = pg_round_down(fault_addr);
     install_page (supp_fault_page->virtual_addr, new_frame->physical_addr, true);
 
     /* TODO: Read the data into the frame */

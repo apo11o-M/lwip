@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 struct supp_page_table_entry* add_supp_page_entry(struct list* supp_page_table){
-    struct supp_page_table_entry* new_entry = malloc(sizeof(struct supp_page_table_entry));
-    new_entry->virtual_addr;
+    struct supp_page_table_entry* new_entry = (struct supp_page_table_entry*) malloc(sizeof(struct supp_page_table_entry));    
     list_push_back(supp_page_table, &new_entry->elem);
+    return new_entry;
 }

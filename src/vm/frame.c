@@ -1,4 +1,5 @@
 #include "vm/frame.h"
+#include "vm/page.h"
 #include "threads/init.h"
 #include "threads/palloc.h"
 #include <stdio.h>
@@ -18,20 +19,29 @@ void setup_frame_table(void){
     // }
     // spinlock_release(&frame_table_lock);
 }
-
 struct frame_table_entry* get_frame(void){
     return get_multiple_frames(1);
 }
 
 struct frame_table_entry* get_multiple_frames(int num_frames){
-  struct frame_table_entry* new_frame = NULL;
-  void* frame_addr;
-   
   // attempt to get a free page from the page directory using the virtual addr 
   // of the provided page
-  frame_addr = palloc_get_multiple(PAL_USER | PAL_ZERO, num_frames);
-
+  void* frame_addr = palloc_get_multiple(PAL_USER | PAL_ZERO, num_frames);
   if (frame_addr != NULL) {
+    // TODO: create frame for EACH physical address
+    return addr_to_frame(frame_addr);
+  } else {
+    // failed to allocate a page, start eviction
+    return evict();
+  }
+}
+
+
+/* create and return frame_table_entry struct for provided physical */
+struct frame_table_entry* addr_to_frame(void* frame_addr){
+  struct frame_table_entry* new_frame = NULL;
+
+    // TODO: add frames for each palloc-ed page
     // if we allocated a free page, create a new frame table entry
     new_frame = (struct frame_table_entry*)malloc(sizeof(struct frame_table_entry));
 
@@ -45,13 +55,10 @@ struct frame_table_entry* get_multiple_frames(int num_frames){
 
     if (new_frame == NULL){
       // failed to allocate memory for frame table entry
-      palloc_free_multiple(frame_addr, num_frames);
+      palloc_free_page(frame_addr);
       return NULL;
     }
-  } else {
-    // failed to allocate a page, start eviction
-    new_frame = evict();
-  }
+
 
   return new_frame;
 }
@@ -62,9 +69,16 @@ struct frame_table_entry* get_multiple_frames(int num_frames){
 // TODO: Add a fair eviction algorithm, send data to swap partition
 struct frame_table_entry* evict(void){
     PANIC("trying to evict");
-    // struct frame_table_entry* free_frame = NULL;
-    // spinlock_acquire(&frame_table_lock);
-    // free_frame = list_entry(list_begin(&frame_table), struct frame_table_entry, elem);
+    struct frame_table_entry* free_frame = NULL;
+    spinlock_acquire(&frame_table_lock);
+    free_frame = list_entry(list_begin(&frame_table), struct frame_table_entry, elem);
     // spinlock_release(&frame_table_lock);
     // return free_frame;
+}
+
+/* assign relevent values so corresponding frames and pages can be co-found */
+void match_frame_page(struct frame_table_entry* frame, struct supp_page_table_entry* page){
+    frame->resident = page;
+    page->frame = frame;
+    // install_page (page->virtual_addr, frame->physical_addr, true);
 }

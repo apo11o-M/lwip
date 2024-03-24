@@ -6,10 +6,13 @@
 #include "threads/thread.h"
 #include "devices/shutdown.h"
 #include "filesys/filesys.h"
-
+#include "vm/frame.h"
+#include "vm/page.h"
 #include "threads/pte.h"
+#include "threads/spinlock.h"
 #include "pagedir.h"
 #include <string.h>
+#include "threads/malloc.h"
 
 static void syscall_handler (struct intr_frame *);
 static void halt();
@@ -29,7 +32,6 @@ static void munmap (int fd, void* addr);
 static void check_argument(void *arg1);
 static struct file * file_get(int fd);
 static struct lock file_lock;
-
 
 void
 syscall_init (void) 
@@ -154,17 +156,25 @@ syscall_handler (struct intr_frame *f)
       check_argument(f->esp + 4);
       check_argument(f->esp + 8);
       mmap(*(int *)(f->esp + 4), *(void **)(f->esp + 8));
+      break;
     case SYS_MUNMAP:
       check_argument(f->esp + 4);
       check_argument(f->esp + 8);
       munmap(*(int *)(f->esp + 4), *(void **)(f->esp + 8));
+      break;
   }
 }
 
 static void mmap (int fd, void* addr) {
-  PANIC("mmapping");
+  /* get size of file */
+  int file_size = filesize(fd);
+  /* get number of pages necessary to store file */
+  int necessary_frames = file_size / PGSIZE;
+  necessary_frames++; /* cieling */
+  /* load data into memory*/
+  load_segment(thread_current()->file_descriptors[fd], 0, pg_round_up(addr), file_size, (uint32_t)(PGSIZE) - (file_size - (uint32_t)(PGSIZE)), false, true);
 }
-static void munmap (int fd, void* addr){
+static void munmap (int fd UNUSED, void* addr UNUSED){
   PANIC("munmapping");
 }
 

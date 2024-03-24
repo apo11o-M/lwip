@@ -10,6 +10,7 @@ struct supp_page_table_entry {
   void *frame; // null if not resident, points to frame table entry
   struct thread *parent;
   struct list_elem elem;
+  int fd;
   // TODO: file mapping stuff
   // TODO: add swap table information?
   // lock stored in thread struct
