@@ -177,7 +177,7 @@ static mapid_t mmap (int fd, void* addr) {
   int necessary_frames = file_size / PGSIZE;
   necessary_frames++; /* cieling */
   /* load data into memory*/
-  load_segment(thread_current()->file_descriptors[fd], 0, pg_round_up(addr), file_size, (uint32_t)(PGSIZE) - (file_size - (uint32_t)(PGSIZE)), false, true, fd);
+  load_segment(thread_current()->file_descriptors[fd], 0, pg_round_up(addr), file_size, (uint32_t)(PGSIZE) - (file_size - (uint32_t)(PGSIZE)), false, fd);
   return fd;
 }
 /* Unmaps the mapping designated by mapping, which must be a mapping ID returned by a previous call to mmap by the same process that has not yet been unmapped.
