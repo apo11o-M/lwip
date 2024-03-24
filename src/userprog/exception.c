@@ -172,8 +172,18 @@ page_fault (struct intr_frame *f)
   user = (f->error_code & PF_U) != 0;
 
   if((fault_addr == NULL)
-      || (user && !is_user_vaddr(fault_addr)) 
-      || !supp_page_table_contains(fault_addr)){
+      || (user && !is_user_vaddr(fault_addr))){
+    exit(-1);
+  }
+
+  /* If the access was a write just past the current stack pointer, grow the stack */
+  if (write && fault_addr < f->esp && fault_addr >= f->esp - 32){
+    /* Stack Growth */
+    // TODO: check maximum stack size
+
+    f->esp -= 32; // TODO: verify this value
+  }
+  else if(!supp_page_table_contains(fault_addr)){
     exit(-1);
   }
 
@@ -184,29 +194,19 @@ page_fault (struct intr_frame *f)
 
     /* Search supplemental page table for the page that faulted */
     spinlock_acquire(&thread_current()->supp_page_lock);
-
-    /* If the access was a write just past the current stack pointer, grow the stack */
-    if (write && fault_addr < f->esp && fault_addr >= f->esp - 32){
-      /* Stack Growth */
-      // TODO: check maximum stack size
-
-      f->esp -= 32; // TODO: verify this value
-    }
-    else{
-      for (e = list_begin(supp_page_table); e != list_end(supp_page_table); e = e->next)
-      {
-          struct supp_page_table_entry *curr = list_entry(e, struct supp_page_table_entry, elem);
-          /* if current page number matches faulted page number*/
-          if (pg_no(fault_addr)==pg_no(curr->virtual_addr)){
-            /* existing supp page entry found, assign to faulted page*/
-            supp_fault_page = curr;
-            break;
-          }
-      }
+    for (e = list_begin(supp_page_table); e != list_end(supp_page_table); e = e->next)
+    {
+        struct supp_page_table_entry *curr = list_entry(e, struct supp_page_table_entry, elem);
+        /* if current page number matches faulted page number*/
+        if (pg_no(fault_addr)==pg_no(curr->virtual_addr)){
+          /* existing supp page entry found, assign to faulted page*/
+          supp_fault_page = curr;
+          break;
+        }
     }
     /* if no existing page table entry found, create and add to supp page table */
     if(!supp_fault_page){
-        supp_fault_page = add_supp_page_entry(supp_page_table); // TODO: when should we be adding pages?
+        supp_fault_page = add_supp_page_entry(supp_page_table);
     }
     spinlock_release(&thread_current()->supp_page_lock);
 
