@@ -5,6 +5,9 @@
 #include <bitmap.h>
 #include "threads/synch.h"
 
+// 8MB stack size
+#define MAX_STACK_SIZE 8 * 1024 * 1024
+
 struct supp_page_table_entry {
   void *virtual_addr;
   void *frame; // null if not resident, points to frame table entry
@@ -22,6 +25,6 @@ struct supp_page_table_entry {
 // void setup_supp_page_table();
 
 // add new entry to page table
-struct supp_page_table_entry* add_supp_page_entry(struct list* supp_page_table);
+struct supp_page_table_entry* add_supp_page_entry(struct list* supp_page_table, void *vaddr);
 
 #endif

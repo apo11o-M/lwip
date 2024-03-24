@@ -179,7 +179,18 @@ page_fault (struct intr_frame *f)
     exit(-1);
   }
 
- 
+  // as long as the fault address is within the maximum stack size, grow the stack
+  if (write 
+      && fault_addr > PHYS_BASE - MAX_STACK_SIZE 
+      && fault_addr >= f->esp - 32) {
+    /* Stack Growth */
+    // TODO: check maximum stack size
+
+    f->esp -= 32; // TODO: verify this value
+  }
+  else if(!supp_page_table_contains(fault_addr)){
+    exit(-1);
+  }
 
   if (user){
     struct list *supp_page_table = &thread_current()->supp_page_table;
@@ -213,7 +224,7 @@ page_fault (struct intr_frame *f)
     }
     /* if no existing page table entry found, create and add to supp page table */
     if(!supp_fault_page){
-        supp_fault_page = add_supp_page_entry(supp_page_table);
+        supp_fault_page = add_supp_page_entry(supp_page_table, fault_addr);
     }
     spinlock_release(&thread_current()->supp_page_lock);
 
@@ -236,4 +247,3 @@ page_fault (struct intr_frame *f)
 
   kill (f);
 }
-
