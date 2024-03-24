@@ -121,14 +121,17 @@ supp_page_table_contains(void *vaddr) {
   struct thread *cur = thread_current();
   struct list_elem *e;
 
+  printf("search page table\n");
   for (e = list_begin(&cur->supp_page_table); 
        e != list_end(&cur->supp_page_table);
        e = list_next(e)) {
     struct supp_page_table_entry *entry = list_entry(e, struct supp_page_table_entry, elem);
+    printf("%p\n", entry->virtual_addr);
     if (pg_round_down(vaddr) == pg_round_down(entry->virtual_addr)) {
       return true;  // Address is in the supplemental page table
     }
   }
+  printf("finished search\n");
   return false;  // Address not found in the supplemental page table
 }
 
@@ -176,16 +179,7 @@ page_fault (struct intr_frame *f)
     exit(-1);
   }
 
-  /* If the access was a write just past the current stack pointer, grow the stack */
-  if (write && fault_addr < f->esp && fault_addr >= f->esp - 32){
-    /* Stack Growth */
-    // TODO: check maximum stack size
-
-    f->esp -= 32; // TODO: verify this value
-  }
-  else if(!supp_page_table_contains(fault_addr)){
-    exit(-1);
-  }
+ 
 
   if (user){
     struct list *supp_page_table = &thread_current()->supp_page_table;
@@ -194,15 +188,28 @@ page_fault (struct intr_frame *f)
 
     /* Search supplemental page table for the page that faulted */
     spinlock_acquire(&thread_current()->supp_page_lock);
-    for (e = list_begin(supp_page_table); e != list_end(supp_page_table); e = e->next)
-    {
-        struct supp_page_table_entry *curr = list_entry(e, struct supp_page_table_entry, elem);
-        /* if current page number matches faulted page number*/
-        if (pg_no(fault_addr)==pg_no(curr->virtual_addr)){
-          /* existing supp page entry found, assign to faulted page*/
-          supp_fault_page = curr;
-          break;
-        }
+     /* If the access was a write just past the current stack pointer, grow the stack */
+    if (write && fault_addr < f->esp && fault_addr >= f->esp - 32){
+      /* Stack Growth */
+      // TODO: check maximum stack size
+      f->esp -= PGSIZE;
+      printf("stack -> %p\n", f->esp);
+    }
+    else if(!supp_page_table_contains(fault_addr)){
+      spinlock_release(&thread_current()->supp_page_lock);
+      exit(-1);
+    }
+    else{
+      for (e = list_begin(supp_page_table); e != list_end(supp_page_table); e = e->next)
+      {
+          struct supp_page_table_entry *curr = list_entry(e, struct supp_page_table_entry, elem);
+          /* if current page number matches faulted page number*/
+          if (pg_no(fault_addr)==pg_no(curr->virtual_addr)){
+            /* existing supp page entry found, assign to faulted page*/
+            supp_fault_page = curr;
+            break;
+          }
+      }
     }
     /* if no existing page table entry found, create and add to supp page table */
     if(!supp_fault_page){
@@ -218,7 +225,6 @@ page_fault (struct intr_frame *f)
     supp_fault_page->virtual_addr = pg_round_down(fault_addr);
     install_page (supp_fault_page->virtual_addr, new_frame->physical_addr, true);
 
-    /* TODO: Read the data into the frame */
     return;
   }
 
