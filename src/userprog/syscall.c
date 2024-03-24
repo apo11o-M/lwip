@@ -150,7 +150,22 @@ syscall_handler (struct intr_frame *f)
       close(*(int *)(f->esp + 4));
       lock_release(&file_lock);
       break;
+    case SYS_MMAP:
+      check_argument(f->esp + 4);
+      check_argument(f->esp + 8);
+      mmap(*(int *)(f->esp + 4), *(void **)(f->esp + 8));
+    case SYS_MUNMAP:
+      check_argument(f->esp + 4);
+      check_argument(f->esp + 8);
+      munmap(*(int *)(f->esp + 4), *(void **)(f->esp + 8));
   }
+}
+
+static void mmap (int fd, void* addr) {
+  PANIC("mmapping");
+}
+static void munmap (int fd, void* addr){
+  PANIC("munmapping");
 }
 
 static void check_argument(void *arg1)
