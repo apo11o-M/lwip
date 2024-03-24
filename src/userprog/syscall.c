@@ -27,8 +27,8 @@ static int write (int fd, const void *buffer, unsigned size);
 static void seek (int fd, unsigned position);
 static unsigned tell (int fd);
 static void close (int fd);
-static void mmap (int fd, void* addr);
-static void munmap (int fd, void* addr);
+static mapid_t mmap (int fd, void* addr);
+static void munmap (mapid_t map_id);
 static void check_argument(void *arg1);
 static struct file * file_get(int fd);
 static struct lock file_lock;
@@ -159,13 +159,12 @@ syscall_handler (struct intr_frame *f)
       break;
     case SYS_MUNMAP:
       check_argument(f->esp + 4);
-      check_argument(f->esp + 8);
-      munmap(*(int *)(f->esp + 4), *(void **)(f->esp + 8));
+      munmap(*(int *)(f->esp + 4));
       break;
   }
 }
 
-static void mmap (int fd, void* addr) {
+static mapid_t mmap (int fd, void* addr) {
   /* get size of file */
   int file_size = filesize(fd);
   /* get number of pages necessary to store file */
@@ -173,8 +172,9 @@ static void mmap (int fd, void* addr) {
   necessary_frames++; /* cieling */
   /* load data into memory*/
   load_segment(thread_current()->file_descriptors[fd], 0, pg_round_up(addr), file_size, (uint32_t)(PGSIZE) - (file_size - (uint32_t)(PGSIZE)), false, true);
+  return fd;
 }
-static void munmap (int fd UNUSED, void* addr UNUSED){
+static void munmap (mapid_t mapid){
   PANIC("munmapping");
 }
 
