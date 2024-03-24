@@ -25,7 +25,7 @@ struct frame_table_entry* get_frame(void);
 struct frame_table_entry* get_multiple_frames(int num_frames);
 struct frame_table_entry* addr_to_frame(void* frame_addr);
 void match_frame_page(struct frame_table_entry* frame, struct supp_page_table_entry* page);
-
+void free_frame(struct frame_table_entry* frame);
 // setup frame table
 // continuously pull from palloc_get_page until all possible frames are acquired
 void setup_frame_table(void);

@@ -402,7 +402,7 @@ load (const char *file_name, void (**eip) (void), void **esp, struct file** file
                   zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
                 }
               if (!load_segment (file, file_page, (void *) mem_page,
-                                 read_bytes, zero_bytes, writable, false))
+                                 read_bytes, zero_bytes, writable, false, NULL))
                 goto done;
             }
           else
@@ -489,8 +489,7 @@ validate_segment (const struct Elf32_Phdr *phdr, struct file *file)
 
    Return true if successful, false if a memory allocation error
    or disk read error occurs. */
-bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
-              uint32_t read_bytes, uint32_t zero_bytes, bool writable, bool zero) 
+bool load_segment (struct file *file, off_t ofs, uint8_t *upage, uint32_t read_bytes, uint32_t zero_bytes, bool writable, bool zero, int fd)
 {
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT (pg_ofs (upage) == 0);
@@ -512,6 +511,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
         struct supp_page_table_entry* new_page_entry = add_supp_page_entry(&thread_current()->supp_page_table);
         spinlock_release(&thread_current()->supp_page_lock);
         new_page_entry->virtual_addr = upage;
+        new_page_entry->fd = (fd != NULL) ? fd : -1;
         match_frame_page(new_frame_entry, new_page_entry);
 
       /* Load this page. */

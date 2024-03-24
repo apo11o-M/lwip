@@ -63,6 +63,17 @@ struct frame_table_entry* addr_to_frame(void* frame_addr){
   return new_frame;
 }
 
+/* free frame and remove from frame table*/
+void free_frame(struct frame_table_entry* frame){
+  // remove frame from the list
+  spinlock_acquire(&frame_table_lock);
+  list_remove(&frame->elem);
+  spinlock_release(&frame_table_lock);
+  // free physical page
+  palloc_free_page(frame->physical_addr);
+  // free frame pointer
+  free(frame);
+}
 
 // helper function for eviction
 // TEMP: returns addr of first element in frame table

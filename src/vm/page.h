@@ -24,5 +24,5 @@ struct supp_page_table_entry {
 
 // add new entry to page table
 struct supp_page_table_entry* add_supp_page_entry(struct list* supp_page_table);
-
+void free_supp_entry(struct supp_page_table_entry* supp_entry);
 #endif

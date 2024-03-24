@@ -163,19 +163,43 @@ syscall_handler (struct intr_frame *f)
       break;
   }
 }
-
+/* Maps the file open as fd into the process's virtual address space. */
 static mapid_t mmap (int fd, void* addr) {
+  if (fd == 1 || fd == 1){
+    PANIC("trying to map std in/out");
+  }
+  if(addr == 0){
+        PANIC("can't map addr 0");
+  }
   /* get size of file */
   int file_size = filesize(fd);
   /* get number of pages necessary to store file */
   int necessary_frames = file_size / PGSIZE;
   necessary_frames++; /* cieling */
   /* load data into memory*/
-  load_segment(thread_current()->file_descriptors[fd], 0, pg_round_up(addr), file_size, (uint32_t)(PGSIZE) - (file_size - (uint32_t)(PGSIZE)), false, true);
+  load_segment(thread_current()->file_descriptors[fd], 0, pg_round_up(addr), file_size, (uint32_t)(PGSIZE) - (file_size - (uint32_t)(PGSIZE)), false, true, fd);
   return fd;
 }
-static void munmap (mapid_t mapid){
-  PANIC("munmapping");
+/* Unmaps the mapping designated by mapping, which must be a mapping ID returned by a previous call to mmap by the same process that has not yet been unmapped.
+*/
+static void munmap (mapid_t map_id){
+  /* iterate through supplemental page table entries */
+  spinlock_acquire(&thread_current()->supp_page_lock);
+  struct list_elem* e;
+  struct list_elem* next_elem; 
+  for(e = list_begin(&thread_current()->supp_page_table); e != list_end(&thread_current()->supp_page_table); e = next_elem){
+    next_elem = list_next(e);
+    /* extract entry*/
+    struct supp_page_table_entry* supp_entry = list_entry(e, struct supp_page_table_entry, elem);
+    /* if mapid, matches munmap map_id*/
+    if(supp_entry->fd == map_id){
+      /* free frame entry */
+      free_frame(supp_entry->frame);
+      /* free supplemental page entry */
+      free_supp_entry(supp_entry);
+    }
+  }
+  spinlock_release(&thread_current()->supp_page_lock);
 }
 
 static void check_argument(void *arg1)
