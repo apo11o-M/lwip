@@ -3,6 +3,7 @@
 #include "threads/vaddr.h"
 #include <list.h>
 #include "threads/synch.h"
+#include "vm/page.h"
 
 // macro to verify page alignment
 #define aligned(addr)  ((addr) % PGSIZE == 0)
@@ -11,6 +12,7 @@
 struct frame_table_entry {
     void *physical_addr;
     struct supp_page_table_entry *resident;
+     
     struct list_elem elem;
 };
 /* frame table (list of frame table entries)*/

@@ -1,5 +1,6 @@
 #include "swap.h"
-
+// panic
+#include <debug.h>
 struct block *swap_block;
 
 struct bitmap* swap_table;

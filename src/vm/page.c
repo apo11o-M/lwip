@@ -1,4 +1,4 @@
-#include "vm/page.h"
+#include "page.h"
 #include "userprog/pagedir.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
@@ -12,3 +12,5 @@ struct supp_page_table_entry* add_supp_page_entry(struct list* supp_page_table){
     new_entry->virtual_addr;
     list_push_back(supp_page_table, &new_entry->elem);
 }
+
+

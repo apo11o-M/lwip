@@ -1,32 +1,36 @@
-#include "vm/frame.h"
+#include "frame.h"
+#include <stdio.h>
 #include "threads/init.h"
 #include "threads/palloc.h"
-#include <stdio.h>
+
 #include "threads/malloc.h"
+#include "userprog/pagedir.h"
+#include "vm/swap.h"
 
-void setup_frame_table(void){
-    /* init frame table and lock */
-    list_init(&frame_table);
-    spinlock_init (&frame_table_lock);
-    /* add frames to the supplemental page table while */
-    // spinlock_acquire(&frame_table_lock);
-    // void* frame_ptr = palloc_get_page(PAL_USER | PAL_ZERO);
-    // while(frame_ptr){
-    //     struct frame_table_entry* new_frame_table_entry = (struct frame_table_entry*)malloc(sizeof(struct frame_table_entry));
-    //     frame_ptr = palloc_get_page(PAL_USER | PAL_ZERO);   
-    //     new_frame_table_entry->physical_addr = frame_ptr;
-    // }
-    // spinlock_release(&frame_table_lock);
+
+void setup_frame_table(void) {
+  /* init frame table and lock */
+  list_init(&frame_table);
+  spinlock_init(&frame_table_lock);
+  /* add frames to the supplemental page table while */
+  // spinlock_acquire(&frame_table_lock);
+  // void* frame_ptr = palloc_get_page(PAL_USER | PAL_ZERO);
+  // while(frame_ptr){
+  //     struct frame_table_entry* new_frame_table_entry = (struct frame_table_entry*)malloc(sizeof(struct frame_table_entry));
+  //     frame_ptr = palloc_get_page(PAL_USER | PAL_ZERO);   
+  //     new_frame_table_entry->physical_addr = frame_ptr;
+  // }
+  // spinlock_release(&frame_table_lock);
 }
 
-struct frame_table_entry* get_frame(void){
-    return get_multiple_frames(1);
+struct frame_table_entry* get_frame(void) {
+  return get_multiple_frames(1);
 }
 
-struct frame_table_entry* get_multiple_frames(int num_frames){
+struct frame_table_entry* get_multiple_frames(int num_frames) {
   struct frame_table_entry* new_frame = NULL;
   void* frame_addr;
-   
+
   // attempt to get a free page from the page directory using the virtual addr 
   // of the provided page
   frame_addr = palloc_get_multiple(PAL_USER | PAL_ZERO, num_frames);
@@ -43,14 +47,51 @@ struct frame_table_entry* get_multiple_frames(int num_frames){
     list_push_back(&frame_table, &new_frame->elem);
     spinlock_release(&frame_table_lock);
 
-    if (new_frame == NULL){
+    if (new_frame == NULL) {
       // failed to allocate memory for frame table entry
       palloc_free_multiple(frame_addr, num_frames);
       return NULL;
     }
-  } else {
+  }
+  else {
     // failed to allocate a page, start eviction
+    spinlock_acquire(&frame_table_lock); 
     new_frame = evict();
+    
+    struct thread *t = thread_current();
+
+
+    void *addr = new_frame->resident->virtual_addr;
+    void * kadd = pagedir_get_page(t->pagedir, addr);
+
+    // find the page that is associated with the frame by iterating through the supplemental page table
+    struct list_elem* e;
+    struct supp_page_table_entry* curr;
+    for (e = list_begin(&t->supp_page_table); e != list_end(&t->supp_page_table); e = list_next(e)) {
+       curr = list_entry(e, struct supp_page_table_entry, elem);
+      if (curr->virtual_addr == addr) {
+        break;
+      }
+    }
+
+    if (curr == NULL) {
+      PANIC("Page not found in supplemental page table");
+    }
+
+    // write to swap partition
+    curr->frame = new_frame;
+    int swap_index = swap_out_page(kadd);
+    curr->swap_index = swap_index;
+
+    // update the page table entry
+    curr->parent = t;
+    curr->status = IN_SWAP;
+    pagedir_clear_page(t->pagedir, addr);
+    palloc_free_multiple(new_frame->physical_addr, num_frames);
+
+    spinlock_release(&frame_table_lock);
+
+
   }
 
   return new_frame;
@@ -60,11 +101,26 @@ struct frame_table_entry* get_multiple_frames(int num_frames){
 // helper function for eviction
 // TEMP: returns addr of first element in frame table
 // TODO: Add a fair eviction algorithm, send data to swap partition
-struct frame_table_entry* evict(void){
-    PANIC("trying to evict");
-    // struct frame_table_entry* free_frame = NULL;
-    // spinlock_acquire(&frame_table_lock);
-    // free_frame = list_entry(list_begin(&frame_table), struct frame_table_entry, elem);
-    // spinlock_release(&frame_table_lock);
-    // return free_frame;
+// Use a clock algorithm to find the next frame to evict
+struct frame_table_entry* evict(void) {
+
+  struct frame_table_entry* frame = NULL;
+  struct list_elem* e;
+
+   
+  while(frame == NULL){
+    for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e)) {
+      struct frame_table_entry* curr = list_entry(e, struct frame_table_entry, elem);
+      if(pagedir_is_accessed(curr->resident->parent->pagedir, curr->resident->virtual_addr) == true){
+        frame = curr;
+        return frame;
+      }
+      else {
+        pagedir_set_accessed(curr->resident->parent->pagedir, curr->resident->virtual_addr, false);
+      }
+    }
+  }
+
+  return NULL;
+  
 }

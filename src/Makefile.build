@@ -77,6 +77,7 @@ userprog_SRC += userprog/syscall.c	# System call handler.
 # No virtual memory code yet.
 vm_SRC = vm/frame.c			# frame file
 vm_SRC += vm/page.c			# page file
+vm_SRC += vm/swap.c			# swap file
 
 # Filesystem code.
 filesys_SRC  = filesys/filesys.c	# Filesystem core.
