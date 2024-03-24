@@ -4,6 +4,11 @@
 #include <stdint.h>
 #include <bitmap.h>
 #include "threads/synch.h"
+#include "threads/thread.h"
+enum page_status {
+  IN_SWAP,
+  NOT_IN_SWAP
+};
 
 struct supp_page_table_entry {
   void *virtual_addr;
@@ -13,6 +18,8 @@ struct supp_page_table_entry {
   int fd;
   // TODO: file mapping stuff
   // TODO: add swap table information?
+  int swap_index;
+  enum page_status status;
   // lock stored in thread struct
 };
 
