@@ -211,7 +211,7 @@ page_fault (struct intr_frame *f)
     
     /* if no existing page table entry found, create and add to supp page table */
     if(!supp_fault_page){
-        supp_fault_page = add_supp_page_entry(supp_page_table, fault_addr);
+        supp_fault_page = add_supp_page_entry(supp_page_table);
     }
     spinlock_release(&thread_current()->supp_page_lock);
 
