@@ -178,9 +178,12 @@ static mapid_t mmap (int fd, void* addr) {
   if(pagedir_get_page(thread_current()->pagedir, addr)){ //TODO: make sure this condition works for all cases
     return -1;
   }
-
   /* get size of file */
   int file_size = filesize(fd);
+  /* fail if file has length zero */
+  if (file_size == 0){
+    return -1;
+  }
   /* get number of pages necessary to store file */
   int necessary_frames = file_size / PGSIZE;
   necessary_frames++; /* cieling */
@@ -207,6 +210,7 @@ static void munmap (mapid_t map_id){
       free_supp_entry(supp_entry);
     }
   }
+
   spinlock_release(&thread_current()->supp_page_lock);
 }
 
