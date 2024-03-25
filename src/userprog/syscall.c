@@ -173,11 +173,16 @@ static mapid_t mmap (int fd, void* addr) {
     return -1;
 
   }
-
   /* Check for mapping overlap */
   if(pagedir_get_page(thread_current()->pagedir, addr)){ //TODO: make sure this condition works for all cases
     return -1;
   }
+
+  /* check for misalignment, fail if not page aligned */
+  if(pg_ofs(addr)){
+    return -1;
+  }
+
   /* get size of file */
   int file_size = filesize(fd);
   /* fail if file has length zero */
@@ -191,6 +196,7 @@ static mapid_t mmap (int fd, void* addr) {
   load_segment(thread_current()->file_descriptors[fd], 0, pg_round_up(addr), file_size, (uint32_t)(PGSIZE) - (file_size - (uint32_t)(PGSIZE)), false, fd);
   return fd;
 }
+
 /* Unmaps the mapping designated by mapping, which must be a mapping ID returned by a previous call to mmap by the same process that has not yet been unmapped.
 */
 static void munmap (mapid_t map_id){
