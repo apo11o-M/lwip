@@ -172,10 +172,10 @@ page_fault (struct intr_frame *f)
   user = (f->error_code & PF_U) != 0;
 
   if((fault_addr == NULL)
-      || (user && !is_user_vaddr(fault_addr))){
+      || (user && !is_user_vaddr(fault_addr))
+      || (!not_present)){
     exit(-1);
   }
-
 
   /* Stack Growth */
   if (write 
