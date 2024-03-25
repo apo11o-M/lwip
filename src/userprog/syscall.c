@@ -155,7 +155,7 @@ syscall_handler (struct intr_frame *f)
     case SYS_MMAP:
       check_argument(f->esp + 4);
       check_argument(f->esp + 8);
-      mmap(*(int *)(f->esp + 4), *(void **)(f->esp + 8));
+      f->eax = mmap(*(int *)(f->esp + 4), *(void **)(f->esp + 8));
       break;
     case SYS_MUNMAP:
       check_argument(f->esp + 4);
@@ -166,14 +166,16 @@ syscall_handler (struct intr_frame *f)
 
 /* Maps the file open as fd into the process's virtual address space. */
 static mapid_t mmap (int fd, void* addr) {
-  if (fd == 1 || fd == 1){
+  if (fd == 0 || fd == 1){
     return -1;
   }
   if(addr == 0){
     return -1;
 
   }
-  if(pagedir_get_page(thread_current()->pagedir, addr)){
+
+  /* Check for mapping overlap */
+  if(pagedir_get_page(thread_current()->pagedir, addr)){ //TODO: make sure this condition works for all cases
     return -1;
   }
 
