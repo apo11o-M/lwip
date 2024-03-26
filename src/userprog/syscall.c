@@ -211,10 +211,12 @@ static void munmap (mapid_t map_id){
     struct supp_page_table_entry* supp_entry = list_entry(e, struct supp_page_table_entry, elem);
     /* if mapid, matches munmap map_id*/
     if(supp_entry->fd == map_id){
-      /* free frame entry */
-      free_frame(supp_entry->frame);
+      struct frame_table_entry* frame_to_free = supp_entry->frame;
       /* free supplemental page entry */
       free_supp_entry(supp_entry, map_id);
+      /* free frame entry */
+      free_frame(frame_to_free);
+
     }
   }
   spinlock_release(&thread_current()->supp_page_lock);
