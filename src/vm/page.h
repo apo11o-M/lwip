@@ -5,6 +5,7 @@
 #include <bitmap.h>
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include "userprog/syscall.h"
 enum page_status {
   IN_SWAP,
   NOT_IN_SWAP
@@ -34,5 +35,5 @@ struct supp_page_table_entry {
 
 // add new entry to page table
 struct supp_page_table_entry* add_supp_page_entry(struct list* supp_page_table);
-void free_supp_entry(struct supp_page_table_entry* supp_entry);
+void free_supp_entry(struct supp_page_table_entry* supp_entry, mapid_t fd);
 #endif

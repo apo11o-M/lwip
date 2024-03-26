@@ -170,10 +170,8 @@ page_fault (struct intr_frame *f)
   not_present = (f->error_code & PF_P) == 0;
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
-
-  if((fault_addr == NULL)
-      || (user && !is_user_vaddr(fault_addr))
-      || (!not_present)){
+  if((fault_addr == NULL) || (user && !is_user_vaddr(fault_addr)) || (!not_present)){
+  // if((fault_addr == NULL) || (user && !is_user_vaddr(fault_addr))){
     exit(-1);
   }
 
@@ -225,7 +223,6 @@ page_fault (struct intr_frame *f)
 
     return;
   }
-
   printf ("Page fault at %p: %s error %s page in %s context.\n",
           fault_addr,
           not_present ? "not present" : "rights violation",

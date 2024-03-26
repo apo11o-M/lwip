@@ -178,7 +178,6 @@ static mapid_t mmap (int fd, void* addr) {
   if(pagedir_get_page(thread_current()->pagedir, addr)){ //TODO: make sure this condition works for all cases
     return -1;
   }
-
   /* check for misalignment, fail if not page aligned */
   if(pg_ofs(addr)){
     return -1;
@@ -193,8 +192,9 @@ static mapid_t mmap (int fd, void* addr) {
   /* get number of pages necessary to store file */
   int necessary_frames = file_size / PGSIZE;
   necessary_frames++; /* cieling */
+  // printf("mapping frames %d| size %d\n", necessary_frames, file_size);
   /* load data into memory*/
-  load_segment(thread_current()->file_descriptors[fd], 0, pg_round_up(addr), file_size, (uint32_t)(PGSIZE) - (file_size - (uint32_t)(PGSIZE)), false, fd);
+  load_segment(thread_current()->file_descriptors[fd], 0, pg_round_up(addr), file_size, (uint32_t)(PGSIZE) - (file_size - (uint32_t)(PGSIZE)), true, fd);
   return fd;
 }
 
@@ -214,10 +214,9 @@ static void munmap (mapid_t map_id){
       /* free frame entry */
       free_frame(supp_entry->frame);
       /* free supplemental page entry */
-      free_supp_entry(supp_entry);
+      free_supp_entry(supp_entry, map_id);
     }
   }
-
   spinlock_release(&thread_current()->supp_page_lock);
 }
 
