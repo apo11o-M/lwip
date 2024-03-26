@@ -11,6 +11,8 @@
 
 struct frame_table_entry {
     void *physical_addr;
+    void *page;
+    struct thread *owner;
     struct supp_page_table_entry *resident;
      
     struct list_elem elem;

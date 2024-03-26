@@ -8,7 +8,7 @@
 #include "userprog/syscall.h"
 enum page_status {
   IN_SWAP,
-  NOT_IN_SWAP
+  IN_FILE
 };
 
 // 8MB stack size
@@ -22,8 +22,8 @@ struct supp_page_table_entry {
   int fd;
   // TODO: file mapping stuff
   // TODO: add swap table information?
-  int swap_index;
-  enum page_status status;
+  int index;
+  enum page_status location;
   // lock stored in thread struct
 };
 
