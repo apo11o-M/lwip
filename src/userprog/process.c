@@ -536,7 +536,39 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage, uint32_t read_b
     }
   return true;
 }
+bool load_segment_mmap (struct file *file, off_t ofs, struct supp_page_table_entry *new_page_entry, uint32_t read_bytes, uint32_t zero_bytes, bool writable, int fd)
+{
+  ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
+  ASSERT (ofs % PGSIZE == 0);
 
+  file_seek (file, ofs);
+
+  /* Calculate how to fill this page.
+      We will read PAGE_READ_BYTES bytes from FILE
+      and zero the final PAGE_ZERO_BYTES bytes. */
+  size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
+  size_t page_zero_bytes = PGSIZE - page_read_bytes;
+
+    /* add frame for new phys page */
+    struct frame_table_entry* new_frame_entry = get_frame ();
+    match_frame_page(new_frame_entry, new_page_entry);
+
+  /* Load this page. */
+  if (file_read (file, new_frame_entry->physical_addr, page_read_bytes) != (int) page_read_bytes)
+    {
+      palloc_free_page (new_frame_entry->physical_addr);
+      return false; 
+    }
+  memset (new_frame_entry->physical_addr + page_read_bytes, 0, page_zero_bytes);
+
+  /* Add the page to the process's address space. */
+  if (!install_page (new_page_entry->virtual_addr, new_frame_entry->physical_addr, writable)) 
+    {
+      palloc_free_page (new_frame_entry->physical_addr);
+      return false; 
+    }
+  return true;
+}
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
