@@ -196,11 +196,11 @@ static mapid_t mmap (int fd, void* addr) {
   /* create new supp page table entry for each necessary frame*/
   struct supp_page_table_entry* new_page_entry;
   for(int frame_idx = 0; frame_idx < necessary_frames; frame_idx++){
-  spinlock_acquire(&thread_current()->supp_page_lock);
-  new_page_entry = add_supp_page_entry(&thread_current()->supp_page_table);
-  spinlock_release(&thread_current()->supp_page_lock);
-  new_page_entry->virtual_addr = pg_round_up(addr) + frame_idx  * PGSIZE;
-  new_page_entry->fd = fd;
+    spinlock_acquire(&thread_current()->supp_page_lock);
+    new_page_entry = add_supp_page_entry(&thread_current()->supp_page_table);
+    spinlock_release(&thread_current()->supp_page_lock);
+    new_page_entry->virtual_addr = pg_round_up(addr) + frame_idx  * PGSIZE;
+    new_page_entry->fd = fd;
   }
   /* load data into memory*/
   load_segment_mmap(thread_current()->file_descriptors[fd], 0, new_page_entry, file_size, (uint32_t)(PGSIZE) - (file_size - (uint32_t)(PGSIZE)), true, fd);
