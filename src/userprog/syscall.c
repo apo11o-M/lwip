@@ -167,7 +167,7 @@ syscall_handler (struct intr_frame *f)
 /* Maps the file open as fd into the process's virtual address space. */
 static mapid_t mmap (int fd, void* addr) {
   /* check if fd is for stdin, stdout, or invalid, fail if so*/
-  if (fd == 0 || fd == 1 || fd > thread_current()->open_files){
+  if (fd == 0 || fd == 1 || fd > FD_MAX){
     return -1;
   }
   if(addr == 0){
