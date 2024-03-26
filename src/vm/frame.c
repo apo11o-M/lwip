@@ -13,15 +13,6 @@ void setup_frame_table(void) {
   /* init frame table and lock */
   list_init(&frame_table);
   spinlock_init(&frame_table_lock);
-  /* add frames to the supplemental page table while */
-  // spinlock_acquire(&frame_table_lock);
-  // void* frame_ptr = palloc_get_page(PAL_USER | PAL_ZERO);
-  // while(frame_ptr){
-  //     struct frame_table_entry* new_frame_table_entry = (struct frame_table_entry*)malloc(sizeof(struct frame_table_entry));
-  //     frame_ptr = palloc_get_page(PAL_USER | PAL_ZERO);   
-  //     new_frame_table_entry->physical_addr = frame_ptr;
-  // }
-  // spinlock_release(&frame_table_lock);
 }
 
 struct frame_table_entry* get_frame(void) {
@@ -36,44 +27,27 @@ struct frame_table_entry* get_multiple_frames(int num_frames) {
   if (frame_addr != NULL) {
     // TODO: create frame for EACH physical address
     return addr_to_frame(frame_addr);
-  } else {
-    // failed to allocate a page, start eviction
-// failed to allocate a page, start eviction
-    spinlock_acquire(&frame_table_lock); 
+  } else 
+  {
+    spinlock_acquire(&frame_table_lock);
+
+    // evict a frame and return the evicted frame
     new_frame = evict();
-    
-    struct thread *t = thread_current();
 
-
-    void *addr = new_frame->resident->virtual_addr;
-    void * kadd = pagedir_get_page(t->pagedir, addr);
-
-    // find the page that is associated with the frame by iterating through the supplemental page table
-    struct list_elem* e;
-    struct supp_page_table_entry* curr;
-    for (e = list_begin(&t->supp_page_table); e != list_end(&t->supp_page_table); e = list_next(e)) {
-       curr = list_entry(e, struct supp_page_table_entry, elem);
-      if (curr->virtual_addr == addr) {
-        break;
-      }
+    // if the bit is dirty, write to swap
+    if(pagedir_is_dirty(new_frame->owner->pagedir, new_frame->page)){
+      // write to swap
+      spinlock_release(&frame_table_lock);
+      new_frame->resident->index = swap_out_page(new_frame->page);
+      spinlock_acquire(&frame_table_lock);
+      new_frame->resident->location = IN_SWAP;
+      
     }
 
-    if (curr == NULL) {
-      PANIC("Page not found in supplemental page table");
-    }
-
-    // write to swap partition
-    curr->frame = new_frame;
-    int swap_index = swap_out_page(kadd);
-    curr->swap_index = swap_index;
-
-    // update the page table entry
-    curr->parent = t;
-    curr->status = IN_SWAP;
-    pagedir_clear_page(t->pagedir, addr);
-    palloc_free_multiple(new_frame->physical_addr, num_frames);
-
+    new_frame->page = NULL;
+    new_frame->owner = thread_current();
     spinlock_release(&frame_table_lock);
+
     return new_frame;
   }
 }
@@ -88,6 +62,7 @@ struct frame_table_entry* addr_to_frame(void* frame_addr){
     new_frame = (struct frame_table_entry*)malloc(sizeof(struct frame_table_entry));
 
     new_frame->physical_addr = frame_addr;
+    new_frame->owner = thread_current();
     // no page is associated with this frame initially.
     new_frame->resident = NULL;
 
@@ -124,18 +99,20 @@ struct frame_table_entry* evict(void) {
   struct frame_table_entry* frame = NULL;
   struct list_elem* e;
 
-   
-  while(frame == NULL){
-    for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e)) {
-      struct frame_table_entry* curr = list_entry(e, struct frame_table_entry, elem);
-      if(pagedir_is_accessed(curr->resident->parent->pagedir, curr->resident->virtual_addr) == true){
-        frame = curr;
-        return frame;
-      }
-      else {
-        pagedir_set_accessed(curr->resident->parent->pagedir, curr->resident->virtual_addr, false);
-      }
+
+  for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e)) {
+    frame = list_entry(e, struct frame_table_entry, elem);
+    // if the frame is not in use, evict it
+    if(!pagedir_is_accessed(frame->owner->pagedir, frame->page)){
+      // free the frame
+      list_remove(e);
+      list_push_back(&frame_table, e);
+      return frame;
     }
+    else{
+      // set the accessed bit to false
+      pagedir_set_accessed(frame->owner->pagedir, frame->page, false);
+      }
   }
 
   return NULL;
