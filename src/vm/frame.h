@@ -17,11 +17,6 @@ struct frame_table_entry {
      
     struct list_elem elem;
 };
-/* frame table (list of frame table entries)*/
-static struct list frame_table;
-
-/*frame table lock*/
-static struct spinlock frame_table_lock; // TODO: look at turning this into a per-frame lock
 
 // gets a free frame and returns frame_table_entry corresponding to the selected frame
 // evicts if necessary

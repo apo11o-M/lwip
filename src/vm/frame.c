@@ -9,6 +9,12 @@
 #include "vm/swap.h"
 
 
+/* frame table (list of frame table entries)*/
+static struct list frame_table;
+
+/*frame table lock*/
+static struct spinlock frame_table_lock;
+
 void setup_frame_table(void) {
   /* init frame table and lock */
   list_init(&frame_table);

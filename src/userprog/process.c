@@ -21,7 +21,7 @@
 #include "vm/page.h"
 #include "vm/frame.h"
 static thread_func start_process NO_RETURN;
-static bool load (const char *cmdline, void (**eip) (void), void **esp, struct file** file_ptr);
+static bool load (char *cmdline, void (**eip) (void), void **esp, struct file** file_ptr);
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -95,7 +95,7 @@ start_process (void *file_name_)
   //loop through all the child processes and find the one that matches the tid
   struct list_elem *e;
   struct thread *cur = thread_current();
-  struct child_process *cp;
+  struct child_process *cp = NULL;
   struct thread *parent = cur->parent;
   //find parent
 
@@ -105,6 +105,9 @@ start_process (void *file_name_)
       break;
     }
   }
+
+ASSERT(cp != NULL);
+
   // assign program file pointer for later closing
   cp->program_file = file_ptr;
   
@@ -147,7 +150,7 @@ process_wait (tid_t child_tid)
 
   //find child from list
   struct list_elem *e;
-  struct child_process *cp;
+  struct child_process *cp = NULL;
   for (e = list_begin(&cur->child_list); e != list_end(&cur->child_list); e = list_next(e)){
     cp = list_entry(e, struct child_process, elem);
     if (cp->tid == child_tid){
@@ -158,6 +161,8 @@ process_wait (tid_t child_tid)
   if (e == list_end(&cur->child_list)){
     return -1;
   }
+
+  ASSERT(cp != NULL);
 
   // wait on semaphore
   if (cp->status) {
@@ -176,7 +181,7 @@ process_exit ()
   uint32_t *pd;
   //find child from list
   struct list_elem *e;
-  struct child_process *cp;
+  struct child_process *cp = NULL;
   struct thread *parent = cur->parent;
   for (e = list_begin(&parent->child_list); e != list_end(&parent->child_list); e = list_next(e)){
     struct child_process *temp = list_entry(e, struct child_process, elem);
@@ -185,6 +190,8 @@ process_exit ()
       break;
     }
   }
+
+  ASSERT(cp != NULL);
 
   // set exit status
   cp->status = cur->exit_status;
@@ -300,7 +307,7 @@ static bool validate_segment (const struct Elf32_Phdr *, struct file *);
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool
-load (const char *file_name, void (**eip) (void), void **esp, struct file** file_ptr)
+load (char *file_name, void (**eip) (void), void **esp, struct file** file_ptr)
 {
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
@@ -402,7 +409,7 @@ load (const char *file_name, void (**eip) (void), void **esp, struct file** file
                   zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
                 }
               if (!load_segment (file, file_page, (void *) mem_page,
-                                 read_bytes, zero_bytes, writable, NULL))
+                                 read_bytes, zero_bytes, writable, -1))
                 goto done;
             }
           else
@@ -511,7 +518,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage, uint32_t read_b
         struct supp_page_table_entry* new_page_entry = add_supp_page_entry(&thread_current()->supp_page_table);
         spinlock_release(&thread_current()->supp_page_lock);
         new_page_entry->virtual_addr = upage;
-        new_page_entry->fd = (fd != NULL) ? fd : -1;
+        new_page_entry->fd = fd;
         match_frame_page(new_frame_entry, new_page_entry);
 
       /* Load this page. */
@@ -536,7 +543,7 @@ bool load_segment (struct file *file, off_t ofs, uint8_t *upage, uint32_t read_b
     }
   return true;
 }
-bool load_segment_mmap (struct file *file, off_t ofs, struct supp_page_table_entry *new_page_entry, uint32_t read_bytes, uint32_t zero_bytes, bool writable, int fd)
+bool load_segment_mmap (struct file *file, off_t ofs, struct supp_page_table_entry *new_page_entry, uint32_t read_bytes, uint32_t zero_bytes, bool writable)
 {
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT (ofs % PGSIZE == 0);

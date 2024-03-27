@@ -18,7 +18,6 @@ struct supp_page_table_entry* add_supp_page_entry(struct list* supp_page_table){
 }
 
 void free_supp_entry(struct supp_page_table_entry* supp_entry, mapid_t fd){
-    struct frame_table_entry* curr_frame = (struct frame_table_entry*)supp_entry->frame;
     list_remove(&supp_entry->elem);
     /* if page was written to, write back to data */
     if(pagedir_is_dirty(thread_current()->pagedir, supp_entry->virtual_addr)){

@@ -15,7 +15,7 @@
 #include "threads/malloc.h"
 
 static void syscall_handler (struct intr_frame *);
-static void halt();
+static void halt(void);
 static int exec(const char *cmd_line);
 static int wait(int pid);
 static bool create (const char *file, unsigned initial_size);
@@ -29,7 +29,7 @@ static unsigned tell (int fd);
 static void close (int fd);
 static mapid_t mmap (int fd, void* addr);
 static void munmap (mapid_t map_id);
-static void check_argument(void *arg1);
+static void check_argument(const void *arg1);
 static struct file * file_get(int fd);
 static struct lock file_lock;
 
@@ -194,7 +194,7 @@ static mapid_t mmap (int fd, void* addr) {
   necessary_frames++; /* cieling */
   // printf("mapping frames %d| size %d\n", necessary_frames, file_size);
   /* create new supp page table entry for each necessary frame*/
-  struct supp_page_table_entry* new_page_entry;
+  struct supp_page_table_entry* new_page_entry = NULL;
   for(int frame_idx = 0; frame_idx < necessary_frames; frame_idx++){
     spinlock_acquire(&thread_current()->supp_page_lock);
     new_page_entry = add_supp_page_entry(&thread_current()->supp_page_table);
@@ -203,7 +203,7 @@ static mapid_t mmap (int fd, void* addr) {
     new_page_entry->fd = fd;
   }
   /* load data into memory*/
-  load_segment_mmap(thread_current()->file_descriptors[fd], 0, new_page_entry, file_size, (uint32_t)(PGSIZE) - (file_size - (uint32_t)(PGSIZE)), true, fd);
+  load_segment_mmap(thread_current()->file_descriptors[fd], 0, new_page_entry, file_size, (uint32_t)(PGSIZE) - (file_size - (uint32_t)(PGSIZE)), true);
   return fd;
 }
 
@@ -231,7 +231,7 @@ static void munmap (mapid_t map_id){
   spinlock_release(&thread_current()->supp_page_lock);
 }
 
-static void check_argument(void *arg1)
+static void check_argument(const void *arg1)
 {
 
   if(!is_user_vaddr(arg1) || arg1 == NULL || pagedir_get_page(thread_current()->pagedir,arg1 ) == NULL){ 
@@ -243,7 +243,7 @@ static void check_argument(void *arg1)
 Terminates Pintos by calling shutdown_power_off() (declared in devices/shutdown.h).
 This should be seldom used, because you lose some information about possible deadlock situations, etc.
 */
-static void halt()
+static void halt(void)
 {
  shutdown_power_off();
 }
