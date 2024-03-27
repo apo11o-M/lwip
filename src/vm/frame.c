@@ -14,6 +14,7 @@ static struct list frame_table;
 
 /*frame table lock*/
 static struct spinlock frame_table_lock;
+struct list_elem* clock_hand;
 
 void setup_frame_table(void) {
   /* init frame table and lock */
@@ -43,9 +44,7 @@ struct frame_table_entry* get_multiple_frames(int num_frames) {
     // if the bit is dirty, write to swap
     if(pagedir_is_dirty(new_frame->owner->pagedir, new_frame->page)){
       // write to swap
-      spinlock_release(&frame_table_lock);
       new_frame->resident->index = swap_out_page(new_frame->page);
-      spinlock_acquire(&frame_table_lock);
       new_frame->resident->location = IN_SWAP;
       
     }
@@ -103,25 +102,31 @@ void free_frame(struct frame_table_entry* frame){
 struct frame_table_entry* evict(void) {
 
   struct frame_table_entry* frame = NULL;
-  struct list_elem* e;
 
-
-  for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e)) {
-    frame = list_entry(e, struct frame_table_entry, elem);
-    // if the frame is not in use, evict it
-    if(!pagedir_is_accessed(frame->owner->pagedir, frame->page)){
-      // free the frame
-      list_remove(e);
-      list_push_back(&frame_table, e);
-      return frame;
+  while(1){
+    if(clock_hand == NULL){
+      clock_hand = list_begin(&frame_table);
     }
     else{
-      // set the accessed bit to false
-      pagedir_set_accessed(frame->owner->pagedir, frame->page, false);
-      }
-  }
+      clock_hand = list_next(clock_hand);
+    }
 
-  return NULL;
+    if(clock_hand == list_end(&frame_table)){
+      clock_hand = list_begin(&frame_table);
+    }
+
+    frame = list_entry(clock_hand, struct frame_table_entry, elem);
+    if(pagedir_is_accessed(frame->owner->pagedir, frame->page))
+    {
+      pagedir_set_accessed(frame->owner->pagedir, frame->page, false);
+    }
+    else{
+      break;
+    }
+  }
+  return frame;
+  
+
   
 }
 
