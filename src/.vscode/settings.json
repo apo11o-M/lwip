@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "*.pl": "prolog",
-        "thread.h": "c"
+        "thread.h": "c",
+        "e1000.h": "c"
     }
 }

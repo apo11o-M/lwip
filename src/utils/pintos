@@ -680,6 +680,12 @@ sub run_qemu {
     push (@cmd, '-s', '-S') if $debug eq 'gdb';
     push (@cmd, '-monitor', 'null') if $vga eq 'none' && $debug eq 'none';
     push (@cmd, '-machine', 'type=pc,accel=kvm') if $kvm;
+
+    # Open-ended project e1000 additions:
+    # push (@cmd, '-net', 'none');
+    push (@cmd, '-netdev', 'user,id=vmnet,net=192.168.0.0/24,hostfwd=tcp::9080-:80,hostfwd=tcp::9022-:22');
+    push (@cmd, '-device', 'e1000,netdev=vmnet');
+
     run_command (@cmd);
 }
 

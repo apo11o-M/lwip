@@ -56,6 +56,8 @@
 #include "vm/page.h"
 #include "vm/frame.h"
 
+#include "vm/e1000.h"
+
 /* Page directory with kernel mappings only. */
 uint32_t *init_page_dir;
 
@@ -159,6 +161,10 @@ main (void)
   timer_calibrate ();
 
   usb_init ();
+
+  e1000_init ();
+
+  
 #ifdef FILESYS
   /* Initialize file system. */
   usb_storage_init ();
