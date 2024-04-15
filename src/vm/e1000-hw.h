@@ -195,7 +195,7 @@
 #define E1000_TDBAH    0x03804  /* TX Descriptor Base Address High - RW */
 #define E1000_TDLEN    0x03808  /* TX Descriptor Length - RW */
 #define E1000_TDH      0x03810  /* TX Descriptor Head - RW */
-#define E1000_TDT      0x03818  /* TX Descripotr Tail - RW */
+#define E1000_TDT      0x03818  /* TX Descriptor Tail - RW */
 #define E1000_TIDV     0x03820  /* TX Interrupt Delay Value - RW */
 #define E1000_TXDCTL   0x03828  /* TX Descriptor Control - RW */
 #define E1000_TADV     0x0382C  /* TX Interrupt Absolute Delay Val - RW */
