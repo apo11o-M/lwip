@@ -19,7 +19,7 @@ int e1000_send_packet(const void *data, uint16_t num_bytes);
     If it finds a packet, it returns 0 and places the contents in the provided buffer.
     If not, it returns -1.
 */
-int e1000_recieve_packet(const char data_buf[ENET_PACKET_MAX_BYTES]);
+int e1000_recieve_packet(char data_buf[ENET_PACKET_MAX_BYTES]);
 
 
 #endif

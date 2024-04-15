@@ -90,7 +90,7 @@ e1000_send_packet(const void *data, uint16_t num_bytes){ // TODO: how do you add
     If not, it returns -1.
 */
 int 
-e1000_recieve_packet(const char data_buf[ENET_PACKET_MAX_BYTES]){ //TODO: how do you choose the location to receive data from?
+e1000_recieve_packet(char data_buf[ENET_PACKET_MAX_BYTES]){ //TODO: how do you choose the location to receive data from?
 
   /* Get necessary data about the receive descriptor ring */
   void * base_ptr = pci_reg_read32(e1000_io, E1000_RDBAH) << 32;
@@ -109,7 +109,9 @@ e1000_recieve_packet(const char data_buf[ENET_PACKET_MAX_BYTES]){ //TODO: how do
   }
 
   /* Copy the received data to the provided buffer*/
-  void *received_data = strlcpy(data_buf, buffer_address, receive_descriptor->lower); //TODO: what is the best way to handle allocation of this data?
+  void *data_ptr = receive_descriptor->upper.data << 32;
+  data_ptr += receive_descriptor->lower.data;
+  void *received_data = (void *)strlcpy(data_buf, data_ptr, receive_descriptor->lower.flags.length); //TODO: what is the best way to handle allocation of this data?
 
   /* Clear the descriptor's status bits */
   receive_descriptor->upper.fields.status = 0;
