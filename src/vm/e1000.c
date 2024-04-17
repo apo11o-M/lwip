@@ -6,9 +6,12 @@
 #include <string.h>
 
 #define PCI_COMMAND_OFFSET 32 /* offsetof (struct pci_config_header, pci_command) */
+#define TX_DESC_COUNT 8
+#define TX_DESC_SIZE 2000 /* The size (in bytes) of each transmit descriptor */
 
 static struct pci_dev *e1000_dev;
 static struct pci_io *e1000_io;
+static char[TX_DESC_COUNT][TX_DESC_SIZE] tx_desc_ring;
 
 
 void
@@ -24,6 +27,13 @@ e1000_init (void)
     pci_enable_bus_master(e1000_dev); 
 
     /* TODO: initialize transmit descriptor ring */
+    void * base_ptr = pci_reg_read32(e1000_io, E1000_RDBAH) << 32;
+    base_ptr += pci_reg_read32(e1000_io, E1000_RDBAL);
+    uint32_t head_offset = pci_reg_read32(e1000_io, E1000_RDH);
+    uint32_t tail_offset = pci_reg_read32(e1000_io, E1000_RDT);
+    uint32_t ring_size = pci_reg_read32(e1000_io, E1000_RDLEN);
+    // global array of 2kb char arrays (~ 8 or 16)
+    tx_desc_ring = malloc(TX_DESC_SIZE * TX_DESC_COUNT);
 
     /* Print status */
     printf("E1000 Status 0x%x\n", pci_reg_read32(e1000_io, E1000_STATUS));
@@ -41,7 +51,9 @@ e1000_send_packet(const void *data, uint16_t num_bytes){ // TODO: how do you add
   }
 
   /* Get necessary data about the transmit descriptor ring */
-  void * base_ptr = pci_reg_read32(e1000_io, E1000_TDBAH) << 32;
+
+  //we should be setting these things, not reading them
+  void * base_ptr = pci_reg_read32(e1000_io, E1000_TDBAH) << 32; // drop the upper base address, just use the lower
   base_ptr += pci_reg_read32(e1000_io, E1000_TDBAL);
   uint32_t head_offset = pci_reg_read32(e1000_io, E1000_TDH);
   uint32_t tail_offset = pci_reg_read32(e1000_io, E1000_TDT);
@@ -75,7 +87,7 @@ e1000_send_packet(const void *data, uint16_t num_bytes){ // TODO: how do you add
   transmit_descriptor->lower.flags.length = num_bytes; // set length
 
   transmit_descriptor->upper.fields.status = 0; // reset status
-  transmit_descriptor->lower.flags.cmd = 0 | 0x1000; // set Report Status bit
+  transmit_descriptor->lower.data | E1000_TXD_CMD_RS; // set Report Status bit
 
   /* Update the descriptor ring's tail pointer */
   pci_reg_write32(e1000_io, E1000_TDT, (tail_offset + TX_DESC_SIZE) % ring_size); //TODO: is TX_DESC_SIZE necessary?
