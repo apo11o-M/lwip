@@ -1,12 +1,18 @@
 {
     "files.associations": {
-        "*.pl": "prolog",
-        "stdio.h": "c",
-        "vaddr.h": "c",
-        "malloc.h": "c",
-        "frame.h": "c",
-        "page.h": "c",
-        "pte.h": "c",
-        "syscall.h": "c"
+      "*html": "html",
+      "*.pl": "prolog",
+      "stdio.h": "c",
+      "vaddr.h": "c",
+      "malloc.h": "c",
+      "frame.h": "c",
+      "page.h": "c",
+      "pte.h": "c",
+      "syscall.h": "c",
+      "def.h": "c",
+      "console.h": "c",
+      "debug.h": "c",
+      "e1000.h": "c",
+      "stdbool.h": "c"
     }
 }

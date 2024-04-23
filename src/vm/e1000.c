@@ -11,8 +11,8 @@
 
 static struct pci_dev *e1000_dev;
 static struct pci_io *e1000_io;
-static char[TX_DESC_COUNT][TX_DESC_SIZE] tx_desc_ring;
-
+// static char tx_desc_ring [TX_DESC_COUNT][TX_DESC_SIZE];
+static char *tx_desc_ring;
 
 void
 e1000_init (void)
