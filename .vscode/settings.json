@@ -13,6 +13,10 @@
       "console.h": "c",
       "debug.h": "c",
       "e1000.h": "c",
-      "stdbool.h": "c"
+      "stdbool.h": "c",
+      "opt.h": "c",
+      "lwipopts.h": "c",
+      "cc.h": "c",
+      "stats.h": "c"
     }
 }

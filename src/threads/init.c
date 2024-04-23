@@ -57,6 +57,7 @@
 #include "vm/frame.h"
 
 #include "vm/e1000.h"
+#include "vm/ethernetif.c"
 
 /* Page directory with kernel mappings only. */
 uint32_t *init_page_dir;
@@ -163,6 +164,8 @@ main (void)
   usb_init ();
 
   e1000_init ();
+  print_in_ethernetif();
+
 
   
 #ifdef FILESYS

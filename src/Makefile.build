@@ -9,7 +9,7 @@ include ../Make.vars
 include ../../tests/Make.tests
 
 # Compiler and assembler options.
-kernel.bin: CPPFLAGS += -I$(SRCDIR)/lib/kernel
+kernel.bin: CPPFLAGS += -I$(SRCDIR)/lib/kernel -I$(SRCDIR)/lwip/lwip/src/include
 
 # Core kernel.
 threads_SRC  = threads/start.S		# Startup code.
